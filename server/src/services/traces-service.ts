@@ -1,4 +1,4 @@
-import { ExportTraceServiceRequest } from "../lib/otlp-types";
+import { ExportTraceServiceRequest } from "@claude-otel/lib";
 import { parseAttributes, parseTimestamp, getStringAttr } from "../lib/otlp-parser";
 import { upsertSession } from "./session-service";
 import { appLogger } from "../lib/logger";

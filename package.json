@@ -1,10 +1,13 @@
 {
   "name": "claude-otel-collector",
   "private": true,
+  "workspaces": ["lib", "server", "web"],
   "scripts": {
-    "dev:server": "cd server && npm run dev",
-    "dev:web": "cd web && npm run dev",
-    "dev": "concurrently \"npm:dev:server\" \"npm:dev:web\""
+    "dev:server": "npm run build:lib && cd server && npm run dev",
+    "dev:web": "npm run build:lib && cd web && npm run dev",
+    "dev": "npm run build:lib && concurrently \"npm:dev:server\" \"npm:dev:web\"",
+    "build:lib": "cd lib && npm run build",
+    "build": "cd lib && npm run build && cd ../server && npm run build && cd ../web && npm run build"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

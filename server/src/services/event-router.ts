@@ -1,7 +1,7 @@
 import {
   ExportLogsServiceRequest,
   LogRecord,
-} from "../lib/otlp-types";
+} from "@claude-otel/lib";
 import {
   parseAttributes,
   parseTimestamp,

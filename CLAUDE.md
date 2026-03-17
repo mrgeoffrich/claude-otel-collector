@@ -24,7 +24,12 @@ cd server && npx prisma generate         # Regenerate client (runs automatically
 
 ## Architecture
 
-Monorepo with two workspaces managed by a root `package.json` using `concurrently`:
+Monorepo with three npm workspaces (`lib`, `server`, `web`):
+
+**`lib/`** — Shared TypeScript types (`@claude-otel/lib`)
+- API response types (Session, Prompt, TimelineEvent, DashboardStats, etc.) used by both server and web
+- OTLP protocol type definitions (ExportLogsServiceRequest, etc.)
+- Type-only package — build with `npm run build:lib` before server/web (done automatically by dev scripts)
 
 **`server/`** — Express 5 + Prisma + SQLite OTLP collector
 - Accepts OTLP/HTTP JSON at `POST /v1/logs`, `/v1/metrics`, `/v1/traces` (port 4318)
@@ -38,12 +43,12 @@ Monorepo with two workspaces managed by a root `package.json` using `concurrentl
 - Correlation: `prompt.id` is the primary join key (like a trace), `session.id` groups prompts into conversations
 - REST API under `/api/` serves the frontend: sessions, prompts, prompt events timeline, dashboard stats, errors, search
 - Config validated with Zod (`lib/config.ts`), logging via pino (`lib/logger.ts`)
-- OTLP type definitions in `lib/otlp-types.ts`, parsing helpers in `lib/otlp-parser.ts`
+- OTLP parsing helpers in `lib/otlp-parser.ts`
 
 **`web/`** — React 19 + Vite 7 + Tailwind v4 + shadcn/ui dashboard
 - Pages: Sessions list → Session detail (prompt timeline with nested events) → Dashboard (token/cost charts via Recharts) → Errors → Search
 - Vite proxies `/api` requests to the server at `http://localhost:4318`
-- API client in `lib/api.ts` with typed fetch wrappers
+- API client in `lib/api.ts` with typed fetch wrappers; types re-exported from `@claude-otel/lib`
 
 ## Prisma
 

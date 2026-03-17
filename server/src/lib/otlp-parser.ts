@@ -1,4 +1,4 @@
-import { AnyValue, KeyValue, LogRecord } from "./otlp-types";
+import { AnyValue, KeyValue, LogRecord } from "@claude-otel/lib";
 
 export type ParsedAttributes = Record<string, string | number | boolean>;
 

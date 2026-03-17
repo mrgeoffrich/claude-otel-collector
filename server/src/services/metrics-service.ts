@@ -1,5 +1,5 @@
 import prisma from "../lib/prisma";
-import { ExportMetricsServiceRequest, NumberDataPoint } from "../lib/otlp-types";
+import { ExportMetricsServiceRequest, NumberDataPoint } from "@claude-otel/lib";
 import { parseAttributes, parseTimestamp } from "../lib/otlp-parser";
 import { appLogger } from "../lib/logger";
 
