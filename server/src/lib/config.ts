@@ -9,7 +9,7 @@ const configSchema = z.object({
   databaseUrl: z.string().default("file:./prisma/dev.db"),
   logLevel: z.string().default("info"),
   rawLogRetentionDays: z.coerce.number().default(7),
-  frontendUrl: z.string().default("http://localhost:3000"),
+  frontendUrl: z.string().default("http://localhost:3110"),
 });
 
 const config = configSchema.parse({
