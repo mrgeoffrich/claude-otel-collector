@@ -7,11 +7,9 @@ An OpenTelemetry collector and trace browser for the Claude Agent SDK. Receives 
 ```bash
 # Install dependencies
 npm install
-cd server && npm install
-cd ../web && npm install
 
 # Initialize the database
-cd ../server && npx prisma db push
+cd server && npx prisma migrate dev
 ```
 
 Server config is in `server/.env` (already present with working defaults). See `.env.example` for reference.
