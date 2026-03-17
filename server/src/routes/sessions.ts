@@ -38,7 +38,7 @@ router.get(
   "/:id",
   (async (req: Request, res: Response) => {
     const session = await prisma.session.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: {
         _count: {
           select: { prompts: true },
@@ -59,7 +59,7 @@ router.get(
   "/:id/prompts",
   (async (req: Request, res: Response) => {
     const prompts = await prisma.prompt.findMany({
-      where: { sessionId: req.params.id },
+      where: { sessionId: req.params.id as string },
       orderBy: { timestamp: "asc" },
     });
 

@@ -8,7 +8,7 @@ router.get(
   "/:id",
   (async (req: Request, res: Response) => {
     const prompt = await prisma.prompt.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: {
         _count: {
           select: {
@@ -33,7 +33,7 @@ router.get(
 router.get(
   "/:id/events",
   (async (req: Request, res: Response) => {
-    const promptId = req.params.id;
+    const promptId = req.params.id as string;
 
     const [apiRequests, toolResults, apiErrors, toolDecisions] =
       await Promise.all([
