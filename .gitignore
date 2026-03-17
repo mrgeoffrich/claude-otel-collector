@@ -6,6 +6,7 @@ dist/
 *.db-wal
 *.db-shm
 data/raw/
+**/data/raw/
 .next/
 coverage/
 .turbo/
