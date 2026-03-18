@@ -1,13 +1,10 @@
 export type {
   Session,
-  Prompt,
-  TimelineEvent,
   TraceSpan,
   DashboardStats,
   TokenUsageBucket,
   CostData,
   PaginatedResponse,
-  ErrorsResponse,
 } from "./api-types";
 
 export type {

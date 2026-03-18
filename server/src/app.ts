@@ -9,10 +9,7 @@ import { errorHandler, notFoundHandler } from "./lib/error-handler";
 
 import otlpRoutes from "./routes/otlp";
 import sessionRoutes from "./routes/sessions";
-import promptRoutes from "./routes/prompts";
 import dashboardRoutes from "./routes/dashboard";
-import errorRoutes from "./routes/errors";
-import searchRoutes from "./routes/search";
 import traceRoutes from "./routes/traces";
 
 const app: express.Application = express();
@@ -60,10 +57,7 @@ app.use(otlpRoutes);
 
 // API routes for frontend
 app.use("/api/sessions", sessionRoutes);
-app.use("/api/prompts", promptRoutes);
 app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/errors", errorRoutes);
-app.use("/api/search", searchRoutes);
 app.use("/api/traces", traceRoutes);
 
 // 404 handler

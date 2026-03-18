@@ -7,13 +7,11 @@ import {
   type TokenUsageBucket,
   type CostData,
 } from "@/lib/api";
-import { formatTokens, formatCost, formatPercent } from "@/lib/format";
+import { formatTokens, formatDuration, formatPercent } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
@@ -84,10 +82,9 @@ export function DashboardPage() {
 
   const modelPieData = costData
     ? Object.entries(costData.modelDistribution).map(
-        ([model, { count, cost }]) => ({
+        ([model, { count }]) => ({
           name: model,
           value: count,
-          cost,
         }),
       )
     : [];
@@ -108,9 +105,9 @@ export function DashboardPage() {
           subtitle={`${formatTokens(stats.totalInputTokens)} in / ${formatTokens(stats.totalOutputTokens)} out`}
         />
         <StatCard
-          title="Total Cost"
-          value={formatCost(stats.totalCostUsd)}
-          subtitle={`${stats.totalApiCalls} API calls`}
+          title="LLM Spans"
+          value={String(stats.spans)}
+          subtitle={`${stats.failedSpans} failed, ${stats.sessions} sessions`}
         />
         <StatCard
           title="Cache Hit Rate"
@@ -118,9 +115,9 @@ export function DashboardPage() {
           subtitle={`${formatTokens(stats.totalCacheReadTokens)} cached`}
         />
         <StatCard
-          title="Avg Cost / Prompt"
-          value={formatCost(stats.avgCostPerPrompt)}
-          subtitle={`${stats.prompts} prompts, ${stats.sessions} sessions`}
+          title="Avg TTFT"
+          value={stats.avgTtftMs != null ? formatDuration(stats.avgTtftMs) : "-"}
+          subtitle={stats.avgDurationMs != null ? `Avg duration: ${formatDuration(stats.avgDurationMs)}` : undefined}
         />
       </div>
 
@@ -215,44 +212,6 @@ export function DashboardPage() {
                   </Pie>
                   <Tooltip />
                 </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">
-                No data yet
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Cost per session */}
-        <Card className="col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Cost per Session</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {costData && costData.sessionCosts.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={costData.sessionCosts.slice(0, 20)}>
-                  <XAxis
-                    dataKey="id"
-                    tickFormatter={(v) =>
-                      v.length > 12 ? `${v.slice(0, 12)}...` : v
-                    }
-                    fontSize={11}
-                    angle={-30}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis
-                    tickFormatter={(v) => formatCost(v)}
-                    fontSize={12}
-                  />
-                  <Tooltip
-                    formatter={(v) => formatCost(Number(v))}
-                    labelFormatter={(v) => `Session: ${v}`}
-                  />
-                  <Bar dataKey="totalCostUsd" fill="#8884d8" name="Cost" />
-                </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">

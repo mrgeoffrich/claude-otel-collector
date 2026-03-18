@@ -10,34 +10,46 @@ router.get(
     const hours = parseInt(req.query.hours as string) || 24;
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-    const [sessions, prompts, apiRequests, apiErrors] = await Promise.all([
+    const [sessions, spans, failedSpans] = await Promise.all([
       prisma.session.count({ where: { lastSeenAt: { gte: since } } }),
-      prisma.prompt.count({ where: { timestamp: { gte: since } } }),
-      prisma.apiRequest.findMany({
-        where: { timestamp: { gte: since } },
+      prisma.traceSpan.findMany({
+        where: { startTime: { gte: since } },
         select: {
           inputTokens: true,
           outputTokens: true,
-          cacheReadInputTokens: true,
-          cacheCreationInputTokens: true,
-          costUsd: true,
+          cacheReadTokens: true,
+          cacheCreationTokens: true,
+          ttftMs: true,
+          durationMs: true,
         },
       }),
-      prisma.apiError.count({ where: { timestamp: { gte: since } } }),
+      prisma.traceSpan.count({
+        where: { startTime: { gte: since }, success: false },
+      }),
     ]);
 
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let totalCacheReadTokens = 0;
     let totalCacheCreationTokens = 0;
-    let totalCostUsd = 0;
+    let ttftSum = 0;
+    let ttftCount = 0;
+    let durationSum = 0;
+    let durationCount = 0;
 
-    for (const r of apiRequests) {
-      totalInputTokens += r.inputTokens || 0;
-      totalOutputTokens += r.outputTokens || 0;
-      totalCacheReadTokens += r.cacheReadInputTokens || 0;
-      totalCacheCreationTokens += r.cacheCreationInputTokens || 0;
-      totalCostUsd += r.costUsd || 0;
+    for (const s of spans) {
+      totalInputTokens += s.inputTokens || 0;
+      totalOutputTokens += s.outputTokens || 0;
+      totalCacheReadTokens += s.cacheReadTokens || 0;
+      totalCacheCreationTokens += s.cacheCreationTokens || 0;
+      if (s.ttftMs != null) {
+        ttftSum += s.ttftMs;
+        ttftCount++;
+      }
+      if (s.durationMs != null) {
+        durationSum += s.durationMs;
+        durationCount++;
+      }
     }
 
     const cacheHitRate =
@@ -45,21 +57,18 @@ router.get(
         ? totalCacheReadTokens / (totalCacheReadTokens + totalInputTokens)
         : 0;
 
-    const avgCostPerPrompt = prompts > 0 ? totalCostUsd / prompts : 0;
-
     res.json({
       hours,
       sessions,
-      prompts,
-      errors: apiErrors,
+      spans: spans.length,
+      failedSpans,
       totalInputTokens,
       totalOutputTokens,
       totalCacheReadTokens,
       totalCacheCreationTokens,
-      totalCostUsd,
       cacheHitRate,
-      avgCostPerPrompt,
-      totalApiCalls: apiRequests.length,
+      avgTtftMs: ttftCount > 0 ? Math.round(ttftSum / ttftCount) : null,
+      avgDurationMs: durationCount > 0 ? Math.round(durationSum / durationCount) : null,
     });
   }) as RequestHandler,
 );
@@ -71,16 +80,16 @@ router.get(
     const hours = parseInt(req.query.hours as string) || 24;
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-    const apiRequests = await prisma.apiRequest.findMany({
-      where: { timestamp: { gte: since } },
+    const spans = await prisma.traceSpan.findMany({
+      where: { startTime: { gte: since } },
       select: {
-        timestamp: true,
+        startTime: true,
         inputTokens: true,
         outputTokens: true,
-        cacheReadInputTokens: true,
-        cacheCreationInputTokens: true,
+        cacheReadTokens: true,
+        cacheCreationTokens: true,
       },
-      orderBy: { timestamp: "asc" },
+      orderBy: { startTime: "asc" },
     });
 
     // Group by hour
@@ -95,8 +104,8 @@ router.get(
       }
     >();
 
-    for (const r of apiRequests) {
-      const hourKey = new Date(r.timestamp).toISOString().slice(0, 13) + ":00:00.000Z";
+    for (const s of spans) {
+      const hourKey = new Date(s.startTime).toISOString().slice(0, 13) + ":00:00.000Z";
       const existing = buckets.get(hourKey) || {
         timestamp: hourKey,
         inputTokens: 0,
@@ -105,10 +114,10 @@ router.get(
         cacheCreationTokens: 0,
       };
 
-      existing.inputTokens += r.inputTokens || 0;
-      existing.outputTokens += r.outputTokens || 0;
-      existing.cacheReadTokens += r.cacheReadInputTokens || 0;
-      existing.cacheCreationTokens += r.cacheCreationInputTokens || 0;
+      existing.inputTokens += s.inputTokens || 0;
+      existing.outputTokens += s.outputTokens || 0;
+      existing.cacheReadTokens += s.cacheReadTokens || 0;
+      existing.cacheCreationTokens += s.cacheCreationTokens || 0;
       buckets.set(hourKey, existing);
     }
 
@@ -116,7 +125,7 @@ router.get(
   }) as RequestHandler,
 );
 
-// GET /api/dashboard/cost — Cost analytics
+// GET /api/dashboard/cost — Model distribution and session analytics
 router.get(
   "/cost",
   (async (req: Request, res: Response) => {

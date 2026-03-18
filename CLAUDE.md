@@ -27,26 +27,27 @@ cd server && npx prisma generate         # Regenerate client (runs automatically
 Monorepo with three npm workspaces (`lib`, `server`, `web`):
 
 **`lib/`** — Shared TypeScript types (`@claude-otel/lib`)
-- API response types (Session, Prompt, TimelineEvent, DashboardStats, etc.) used by both server and web
-- OTLP protocol type definitions (ExportLogsServiceRequest, etc.)
+- API response types (Session, TraceSpan, DashboardStats, etc.) used by both server and web
+- OTLP protocol type definitions (ExportTraceServiceRequest, etc.)
 - Type-only package — build with `npm run build:lib` before server/web (done automatically by dev scripts)
 
 **`server/`** — Express 5 + Prisma + SQLite OTLP collector
-- Accepts OTLP/HTTP JSON at `POST /v1/logs`, `/v1/metrics`, `/v1/traces` (port 4318)
-- Raw payloads are written to `data/raw/{logs,metrics,traces}/` before any parsing (fire-and-forget via `services/raw-logger.ts`)
-- Log events are routed by event name through `services/event-router.ts`:
-  - `claude_code.user_prompt` → upserts Session + Prompt
-  - `claude_code.api_request` → inserts ApiRequest, updates Prompt/Session aggregates
-  - `claude_code.api_error` → inserts ApiError
-  - `claude_code.tool_result` → inserts ToolResult
-  - `claude_code.tool_decision` → inserts ToolDecision
-- Correlation: `prompt.id` is the primary join key (like a trace), `session.id` groups prompts into conversations
-- REST API under `/api/` serves the frontend: sessions, prompts, prompt events timeline, dashboard stats, errors, search
+- Accepts OTLP/HTTP JSON at `POST /v1/metrics`, `/v1/traces` (port 4318)
+- Raw payloads are written to `data/raw/{metrics,traces}/` before any parsing (fire-and-forget via `services/raw-logger.ts`)
+- Trace spans are processed by `services/traces-service.ts`:
+  - Parses OTLP spans and stores them in the `TraceSpan` table
+  - Extracts LLM request metadata (model, tokens, TTFT, duration, success)
+  - Extracts rich content (user input, model output, system prompt, tools)
+  - Upserts by `spanId` for idempotent redelivery handling
+  - Updates Session aggregate counters (tokens, API calls, errors)
+- Correlation: `session.id` groups trace spans into conversations
+- REST API under `/api/` serves the frontend: sessions, traces, dashboard stats
 - Config validated with Zod (`lib/config.ts`), logging via pino (`lib/logger.ts`)
 - OTLP parsing helpers in `lib/otlp-parser.ts`
 
 **`web/`** — React 19 + Vite 7 + Tailwind v4 + shadcn/ui dashboard
-- Pages: Sessions list → Session detail (prompt timeline with nested events) → Dashboard (token/cost charts via Recharts) → Errors → Search
+- Pages: Sessions list → Session detail (conversation view + performance tab) → Traces explorer → Dashboard (token/TTFT charts via Recharts)
+- Session detail shows a chat-like conversation view using trace span `newContext` (user input) and `responseModelOutput` (model response), with expandable per-span metrics
 - Vite proxies `/api` requests to the server at `http://localhost:4318`
 - API client in `lib/api.ts` with typed fetch wrappers; types re-exported from `@claude-otel/lib`
 

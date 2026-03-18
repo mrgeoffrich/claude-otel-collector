@@ -6,7 +6,7 @@ import {
   getNumberAttr,
   getBoolAttr,
 } from "../lib/otlp-parser";
-import { upsertSession } from "./session-service";
+import { upsertSession, updateSessionAggregates } from "./session-service";
 import { appLogger } from "../lib/logger";
 import prisma from "../lib/prisma";
 
@@ -53,6 +53,12 @@ async function processSpan(span: Span): Promise<void> {
 
   // Ensure session exists
   await upsertSession(sessionId, attrs, startTime);
+
+  // Check if this span already exists (for redelivery detection)
+  const existingSpan = await prisma.traceSpan.findUnique({
+    where: { spanId: span.spanId || "" },
+    select: { id: true },
+  });
 
   // Upsert by spanId to handle redelivery
   await prisma.traceSpan.upsert({
@@ -129,4 +135,22 @@ async function processSpan(span: Span): Promise<void> {
       attributes: JSON.stringify(attrs),
     },
   });
+
+  // Update session aggregates only for new spans (not redeliveries)
+  if (!existingSpan) {
+    const inputTokens = getNumberAttr(attrs, "input_tokens");
+    const outputTokens = getNumberAttr(attrs, "output_tokens");
+    const cacheReadTokens = getNumberAttr(attrs, "cache_read_tokens");
+    const cacheCreationTokens = getNumberAttr(attrs, "cache_creation_tokens");
+    const success = getBoolAttr(attrs, "success");
+
+    await updateSessionAggregates(sessionId, {
+      inputTokens: inputTokens ? Math.floor(inputTokens) : undefined,
+      outputTokens: outputTokens ? Math.floor(outputTokens) : undefined,
+      cacheReadTokens: cacheReadTokens ? Math.floor(cacheReadTokens) : undefined,
+      cacheCreationTokens: cacheCreationTokens ? Math.floor(cacheCreationTokens) : undefined,
+      apiCalls: 1,
+      errors: success === false ? 1 : undefined,
+    });
+  }
 }

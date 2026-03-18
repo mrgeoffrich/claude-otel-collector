@@ -3,8 +3,6 @@ import { SessionsPage } from "./pages/sessions";
 import { SessionDetailPage } from "./pages/session-detail";
 import { TracesPage } from "./pages/traces";
 import { DashboardPage } from "./pages/dashboard";
-import { ErrorsPage } from "./pages/errors";
-import { SearchPage } from "./pages/search";
 
 function NavItem({ to, children }: { to: string; children: React.ReactNode }) {
   return (
@@ -33,8 +31,6 @@ export default function App() {
           <NavItem to="/sessions">Sessions</NavItem>
           <NavItem to="/traces">Traces</NavItem>
           <NavItem to="/dashboard">Dashboard</NavItem>
-          <NavItem to="/errors">Errors</NavItem>
-          <NavItem to="/search">Search</NavItem>
         </nav>
 
         {/* Main content */}
@@ -45,8 +41,6 @@ export default function App() {
             <Route path="/sessions/:id" element={<SessionDetailPage />} />
             <Route path="/traces" element={<TracesPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/errors" element={<ErrorsPage />} />
-            <Route path="/search" element={<SearchPage />} />
           </Routes>
         </main>
       </div>

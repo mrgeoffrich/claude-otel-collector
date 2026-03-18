@@ -26,7 +26,6 @@ router.get(
       prisma.session.count({ where }),
     ]);
 
-    // Convert BigInt to Number for JSON serialization
     const serialized = sessions.map(serializeSession);
 
     res.json({ data: serialized, total, limit, offset, hasMore: offset + limit < total });
@@ -39,11 +38,6 @@ router.get(
   (async (req: Request, res: Response) => {
     const session = await prisma.session.findUnique({
       where: { id: req.params.id as string },
-      include: {
-        _count: {
-          select: { prompts: true },
-        },
-      },
     });
 
     if (!session) {
@@ -51,19 +45,6 @@ router.get(
     }
 
     res.json(serializeSession(session));
-  }) as RequestHandler,
-);
-
-// GET /api/sessions/:id/prompts — Prompts for a session
-router.get(
-  "/:id/prompts",
-  (async (req: Request, res: Response) => {
-    const prompts = await prisma.prompt.findMany({
-      where: { sessionId: req.params.id as string },
-      orderBy: { timestamp: "asc" },
-    });
-
-    res.json(prompts.map(serializePrompt));
   }) as RequestHandler,
 );
 
@@ -87,16 +68,6 @@ function serializeSession(session: any) {
     totalOutputTokens: Number(session.totalOutputTokens),
     totalCacheReadTokens: Number(session.totalCacheReadTokens),
     totalCacheCreationTokens: Number(session.totalCacheCreationTokens),
-  };
-}
-
-function serializePrompt(prompt: any) {
-  return {
-    ...prompt,
-    totalInputTokens: Number(prompt.totalInputTokens),
-    totalOutputTokens: Number(prompt.totalOutputTokens),
-    totalCacheReadTokens: Number(prompt.totalCacheReadTokens),
-    totalDurationMs: Number(prompt.totalDurationMs),
   };
 }
 

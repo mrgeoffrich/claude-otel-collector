@@ -1,25 +1,19 @@
 export type {
   Session,
-  Prompt,
-  TimelineEvent,
   TraceSpan,
   DashboardStats,
   TokenUsageBucket,
   CostData,
   PaginatedResponse,
-  ErrorsResponse,
 } from "@claude-otel/lib";
 
 import type {
   Session,
-  Prompt,
-  TimelineEvent,
   TraceSpan,
   DashboardStats,
   TokenUsageBucket,
   CostData,
   PaginatedResponse,
-  ErrorsResponse,
 } from "@claude-otel/lib";
 
 const BASE_URL = "/api";
@@ -32,7 +26,7 @@ async function fetchJson<T>(path: string): Promise<T> {
   return res.json();
 }
 
-// --- API Functions ---
+// --- Sessions ---
 
 export function getSessions(params?: {
   limit?: number;
@@ -53,21 +47,11 @@ export function getSession(id: string): Promise<Session> {
   return fetchJson(`/sessions/${id}`);
 }
 
-export function getSessionPrompts(sessionId: string): Promise<Prompt[]> {
-  return fetchJson(`/sessions/${sessionId}/prompts`);
-}
-
 export function getSessionTraces(sessionId: string): Promise<TraceSpan[]> {
   return fetchJson(`/sessions/${sessionId}/traces`);
 }
 
-export function getPrompt(id: string): Promise<Prompt> {
-  return fetchJson(`/prompts/${id}`);
-}
-
-export function getPromptEvents(promptId: string): Promise<TimelineEvent[]> {
-  return fetchJson(`/prompts/${promptId}/events`);
-}
+// --- Traces ---
 
 export function getTraces(params?: {
   limit?: number;
@@ -88,6 +72,8 @@ export function getTraceSpan(spanId: string): Promise<TraceSpan> {
   return fetchJson(`/traces/${spanId}`);
 }
 
+// --- Dashboard ---
+
 export function getDashboardStats(
   hours?: number,
 ): Promise<DashboardStats> {
@@ -100,29 +86,4 @@ export function getTokenUsage(hours?: number): Promise<TokenUsageBucket[]> {
 
 export function getCostData(hours?: number): Promise<CostData> {
   return fetchJson(`/dashboard/cost${hours ? `?hours=${hours}` : ""}`);
-}
-
-export function getErrors(): Promise<ErrorsResponse> {
-  return fetchJson("/errors");
-}
-
-export function searchPrompts(params?: {
-  q?: string;
-  model?: string;
-  minCost?: number;
-  maxCost?: number;
-  hasErrors?: boolean;
-  limit?: number;
-  offset?: number;
-}): Promise<PaginatedResponse<Prompt & { session: { id: string; model: string | null } }>> {
-  const search = new URLSearchParams();
-  if (params?.q) search.set("q", params.q);
-  if (params?.model) search.set("model", params.model);
-  if (params?.minCost !== undefined) search.set("minCost", String(params.minCost));
-  if (params?.maxCost !== undefined) search.set("maxCost", String(params.maxCost));
-  if (params?.hasErrors) search.set("hasErrors", "true");
-  if (params?.limit) search.set("limit", String(params.limit));
-  if (params?.offset) search.set("offset", String(params.offset));
-  const qs = search.toString();
-  return fetchJson(`/search/prompts${qs ? `?${qs}` : ""}`);
 }
