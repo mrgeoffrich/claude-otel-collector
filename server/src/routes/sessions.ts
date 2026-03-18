@@ -25,8 +25,12 @@ router.get(
         include: {
           traceSpans: {
             orderBy: { startTime: "asc" },
-            take: 1,
-            select: { newContext: true, responseModelOutput: true },
+            select: {
+              newContext: true,
+              responseModelOutput: true,
+              inputTokens: true,
+              outputTokens: true,
+            },
           },
           _count: { select: { traceSpans: true } },
         },
@@ -35,11 +39,22 @@ router.get(
     ]);
 
     const serialized = sessions.map((session) => {
-      const firstSpan = session.traceSpans[0];
+      const spans = session.traceSpans;
+      const firstSpan = spans[0];
       const spanCount = session._count.traceSpans;
+
+      // Compute token totals from trace spans (more accurate than session aggregates)
+      const spanInputTokens = spans.reduce((s, sp) => s + (sp.inputTokens ?? 0), 0);
+      const spanOutputTokens = spans.reduce((s, sp) => s + (sp.outputTokens ?? 0), 0);
+
       const { traceSpans, _count, ...rest } = session;
+      const base = serializeSession(rest);
+
       return {
-        ...serializeSession(rest),
+        ...base,
+        // Override token totals with span-derived values when spans exist
+        totalInputTokens: spanCount > 0 ? spanInputTokens : base.totalInputTokens,
+        totalOutputTokens: spanCount > 0 ? spanOutputTokens : base.totalOutputTokens,
         spanCount,
         firstMessage: firstSpan?.newContext || null,
         firstResponse: firstSpan?.responseModelOutput || null,

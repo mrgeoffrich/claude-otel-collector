@@ -11,6 +11,21 @@ function stripRolePrefix(text: string): string {
   return text.replace(/^\[(?:USER|ASSISTANT|SYSTEM)\]\n?/i, "");
 }
 
+/**
+ * Strip markdown formatting for plain-text preview
+ */
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")  // **bold**
+    .replace(/\*(.*?)\*/g, "$1")       // *italic*
+    .replace(/`(.*?)`/g, "$1")         // `code`
+    .replace(/^#+\s+/gm, "")           // # headings
+    .replace(/^[-*]\s+/gm, "")         // - list items
+    .replace(/\n/g, " ")               // newlines to spaces
+    .replace(/\s+/g, " ")              // collapse whitespace
+    .trim();
+}
+
 export function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,13 +57,20 @@ export function SessionsPage() {
     );
   }
 
+  // Only show sessions that have trace spans
+  const activeSessions = sessions.filter((s) => (s.spanCount ?? 0) > 0);
+  const emptySessions = sessions.filter((s) => (s.spanCount ?? 0) === 0);
+
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Sessions</h2>
       <div className="space-y-2">
-        {sessions.map((session) => {
+        {activeSessions.map((session) => {
           const preview = session.firstMessage
             ? stripRolePrefix(session.firstMessage)
+            : null;
+          const responsePreview = session.firstResponse
+            ? stripMarkdown(session.firstResponse).slice(0, 140)
             : null;
 
           return (
@@ -76,7 +98,7 @@ export function SessionsPage() {
                     <span className="font-mono">
                       {formatTokens(session.totalInputTokens + session.totalOutputTokens)} tok
                     </span>
-                    <span>{session.spanCount ?? session.totalApiCalls} spans</span>
+                    <span>{session.spanCount} spans</span>
                     <span>{formatRelativeTime(session.lastSeenAt)}</span>
                   </div>
                 </div>
@@ -88,17 +110,47 @@ export function SessionsPage() {
                   </p>
                 )}
 
-                {/* Preview of first response (truncated) */}
-                {session.firstResponse && (
+                {/* Preview of first response (truncated, markdown stripped) */}
+                {responsePreview && (
                   <p className="mt-0.5 text-xs text-muted-foreground truncate">
-                    {session.firstResponse.slice(0, 120)}
-                    {session.firstResponse.length > 120 ? "..." : ""}
+                    {responsePreview}
                   </p>
                 )}
               </div>
             </Link>
           );
         })}
+
+        {/* Old sessions without trace data */}
+        {emptySessions.length > 0 && (
+          <>
+            <div className="text-xs text-muted-foreground pt-4 pb-1">
+              {emptySessions.length} older session{emptySessions.length !== 1 ? "s" : ""} without trace data
+            </div>
+            {emptySessions.map((session) => (
+              <Link
+                key={session.id}
+                to={`/sessions/${session.id}`}
+                className="block group"
+              >
+                <div className="border border-border rounded-lg px-3 py-2 hover:bg-muted/30 transition-colors opacity-50">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {session.id.slice(0, 8)}
+                    </span>
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
+                      {session.model || "unknown"}
+                    </Badge>
+                    <div className="flex-1" />
+                    <span className="text-xs text-muted-foreground">
+                      {formatRelativeTime(session.lastSeenAt)}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );
