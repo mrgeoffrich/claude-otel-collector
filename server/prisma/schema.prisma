@@ -24,7 +24,8 @@ model Session {
   totalToolCalls         Int      @default(0)
   totalErrors            Int      @default(0)
 
-  prompts Prompt[]
+  prompts    Prompt[]
+  traceSpans TraceSpan[]
 
   @@index([lastSeenAt(sort: Desc)])
   @@map("sessions")
@@ -128,6 +129,54 @@ model ToolDecision {
 
   @@index([promptId])
   @@map("tool_decisions")
+}
+
+model TraceSpan {
+  id                     String   @id @default(cuid())
+  traceId                String
+  spanId                 String   @unique
+  parentSpanId           String?
+  sessionId              String
+  spanName               String   // e.g., "claude_code.llm_request"
+  spanKind               Int?
+  startTime              DateTime
+  endTime                DateTime?
+  durationMs             Int?
+
+  // LLM request fields
+  model                  String?
+  querySource            String?  // "sdk", etc.
+  inputTokens            Int?
+  outputTokens           Int?
+  cacheReadTokens        Int?
+  cacheCreationTokens    Int?
+  success                Boolean?
+  attempt                Int?
+  ttftMs                 Int?
+  speed                  String?
+
+  // Rich content
+  systemPromptPreview    String?
+  systemPromptHash       String?
+  systemPromptLength     Int?
+  tools                  String?  // JSON array of tool definitions
+  toolsCount             Int?
+  newContext              String?  // User input
+  newContextMessageCount Int?
+  systemReminders        String?
+  systemRemindersCount   Int?
+  responseModelOutput    String?
+  responseHasToolCall    Boolean?
+
+  // Catch-all
+  attributes             String?  // JSON string
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([traceId])
+  @@index([startTime(sort: Desc)])
+  @@map("trace_spans")
 }
 
 model MetricSnapshot {

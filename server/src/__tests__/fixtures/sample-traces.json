@@ -1,0 +1,69 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          { "key": "host.arch", "value": { "stringValue": "arm64" } },
+          { "key": "os.type", "value": { "stringValue": "linux" } },
+          { "key": "service.name", "value": { "stringValue": "claude-code" } },
+          { "key": "service.version", "value": { "stringValue": "2.1.75" } }
+        ],
+        "droppedAttributesCount": 0
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "com.anthropic.claude_code.tracing",
+            "version": "1.0.0"
+          },
+          "spans": [
+            {
+              "traceId": "66c2a909b3ff10c6025a47ae14addd4a",
+              "spanId": "541d2022b61d71c8",
+              "name": "claude_code.llm_request",
+              "kind": 1,
+              "startTimeUnixNano": "1687820190611000000",
+              "endTimeUnixNano": "1687820195267000000",
+              "attributes": [
+                { "key": "user.id", "value": { "stringValue": "user-trace-123" } },
+                { "key": "session.id", "value": { "stringValue": "session-trace-001" } },
+                { "key": "terminal.type", "value": { "stringValue": "non-interactive" } },
+                { "key": "span.type", "value": { "stringValue": "llm_request" } },
+                { "key": "model", "value": { "stringValue": "claude-sonnet-4-6" } },
+                { "key": "llm_request.context", "value": { "stringValue": "standalone" } },
+                { "key": "speed", "value": { "stringValue": "normal" } },
+                { "key": "query_source", "value": { "stringValue": "sdk" } },
+                { "key": "system_prompt_hash", "value": { "stringValue": "sp_5751120e97d4" } },
+                { "key": "system_prompt_preview", "value": { "stringValue": "You are an AI operations assistant for Mini Infra." } },
+                { "key": "system_prompt_length", "value": { "intValue": "12394" } },
+                { "key": "tools", "value": { "stringValue": "[{\"name\":\"Bash\",\"hash\":\"8e4d230d5409\"},{\"name\":\"Read\",\"hash\":\"f02e123fecb3\"}]" } },
+                { "key": "tools_count", "value": { "intValue": "2" } },
+                { "key": "new_context", "value": { "stringValue": "[USER]\nhello I like tacos" } },
+                { "key": "new_context_message_count", "value": { "intValue": "1" } },
+                { "key": "system_reminders", "value": { "stringValue": "Today's date is 2026-03-18." } },
+                { "key": "system_reminders_count", "value": { "intValue": "1" } },
+                { "key": "duration_ms", "value": { "intValue": "4656" } },
+                { "key": "input_tokens", "value": { "intValue": "3" } },
+                { "key": "output_tokens", "value": { "intValue": "160" } },
+                { "key": "cache_read_tokens", "value": { "intValue": "0" } },
+                { "key": "cache_creation_tokens", "value": { "intValue": "9434" } },
+                { "key": "success", "value": { "boolValue": true } },
+                { "key": "attempt", "value": { "intValue": "1" } },
+                { "key": "response.has_tool_call", "value": { "boolValue": false } },
+                { "key": "ttft_ms", "value": { "intValue": "2114" } },
+                { "key": "response.model_output", "value": { "stringValue": "Hello! Tacos are delicious! How can I help you today?" } }
+              ],
+              "droppedAttributesCount": 0,
+              "events": [],
+              "droppedEventsCount": 0,
+              "status": { "code": 0 },
+              "links": [],
+              "droppedLinksCount": 0,
+              "flags": 257
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

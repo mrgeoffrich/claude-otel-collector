@@ -67,6 +67,41 @@ export interface TimelineEvent {
   attributes?: string | null;
 }
 
+export interface TraceSpan {
+  id: string;
+  traceId: string;
+  spanId: string;
+  parentSpanId: string | null;
+  sessionId: string;
+  spanName: string;
+  spanKind: number | null;
+  startTime: string;
+  endTime: string | null;
+  durationMs: number | null;
+  model: string | null;
+  querySource: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheCreationTokens: number | null;
+  success: boolean | null;
+  attempt: number | null;
+  ttftMs: number | null;
+  speed: string | null;
+  systemPromptPreview: string | null;
+  systemPromptHash: string | null;
+  systemPromptLength: number | null;
+  tools: string | null;
+  toolsCount: number | null;
+  newContext: string | null;
+  newContextMessageCount: number | null;
+  systemReminders: string | null;
+  systemRemindersCount: number | null;
+  responseModelOutput: string | null;
+  responseHasToolCall: boolean | null;
+  attributes: string | null;
+}
+
 export interface DashboardStats {
   hours: number;
   sessions: number;

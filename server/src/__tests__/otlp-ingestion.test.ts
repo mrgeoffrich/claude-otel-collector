@@ -3,6 +3,7 @@ import request from "supertest";
 import app from "../app";
 import prisma from "../lib/prisma";
 import sampleLogs from "./fixtures/sample-logs.json";
+import sampleTraces from "./fixtures/sample-traces.json";
 
 describe("OTLP Ingestion", () => {
   beforeEach(async () => {
@@ -13,6 +14,7 @@ describe("OTLP Ingestion", () => {
     await prisma.apiRequest.deleteMany();
     await prisma.prompt.deleteMany();
     await prisma.session.deleteMany();
+    await prisma.traceSpan.deleteMany();
     await prisma.metricSnapshot.deleteMany();
   });
 
@@ -137,7 +139,7 @@ describe("OTLP Ingestion", () => {
   });
 
   describe("POST /v1/traces", () => {
-    it("should accept and return 200", async () => {
+    it("should accept and return 200 for empty traces", async () => {
       const res = await request(app)
         .post("/v1/traces")
         .set("Content-Type", "application/json")
@@ -145,11 +147,81 @@ describe("OTLP Ingestion", () => {
 
       expect(res.status).toBe(200);
     });
+
+    it("should create session and trace span from llm_request span", async () => {
+      await request(app)
+        .post("/v1/traces")
+        .set("Content-Type", "application/json")
+        .send(JSON.stringify(sampleTraces));
+
+      const session = await prisma.session.findUnique({
+        where: { id: "session-trace-001" },
+      });
+      expect(session).not.toBeNull();
+      expect(session!.model).toBe("claude-sonnet-4-6");
+
+      const span = await prisma.traceSpan.findUnique({
+        where: { spanId: "541d2022b61d71c8" },
+      });
+      expect(span).not.toBeNull();
+      expect(span!.traceId).toBe("66c2a909b3ff10c6025a47ae14addd4a");
+      expect(span!.sessionId).toBe("session-trace-001");
+      expect(span!.spanName).toBe("claude_code.llm_request");
+      expect(span!.spanKind).toBe(1);
+      expect(span!.model).toBe("claude-sonnet-4-6");
+      expect(span!.durationMs).toBe(4656);
+      expect(span!.inputTokens).toBe(3);
+      expect(span!.outputTokens).toBe(160);
+      expect(span!.cacheCreationTokens).toBe(9434);
+      expect(span!.success).toBe(true);
+      expect(span!.ttftMs).toBe(2114);
+      expect(span!.attempt).toBe(1);
+    });
+
+    it("should store rich content fields from trace spans", async () => {
+      await request(app)
+        .post("/v1/traces")
+        .set("Content-Type", "application/json")
+        .send(JSON.stringify(sampleTraces));
+
+      const span = await prisma.traceSpan.findUnique({
+        where: { spanId: "541d2022b61d71c8" },
+      });
+      expect(span).not.toBeNull();
+      expect(span!.querySource).toBe("sdk");
+      expect(span!.systemPromptHash).toBe("sp_5751120e97d4");
+      expect(span!.systemPromptPreview).toBe("You are an AI operations assistant for Mini Infra.");
+      expect(span!.systemPromptLength).toBe(12394);
+      expect(span!.toolsCount).toBe(2);
+      expect(span!.newContext).toBe("[USER]\nhello I like tacos");
+      expect(span!.newContextMessageCount).toBe(1);
+      expect(span!.responseModelOutput).toBe("Hello! Tacos are delicious! How can I help you today?");
+      expect(span!.responseHasToolCall).toBe(false);
+      expect(span!.speed).toBe("normal");
+    });
+
+    it("should handle redelivery by upserting on spanId", async () => {
+      // Send twice
+      await request(app)
+        .post("/v1/traces")
+        .set("Content-Type", "application/json")
+        .send(JSON.stringify(sampleTraces));
+      await request(app)
+        .post("/v1/traces")
+        .set("Content-Type", "application/json")
+        .send(JSON.stringify(sampleTraces));
+
+      const spans = await prisma.traceSpan.findMany({
+        where: { sessionId: "session-trace-001" },
+      });
+      expect(spans).toHaveLength(1);
+    });
   });
 });
 
 describe("API Endpoints", () => {
   beforeEach(async () => {
+    await prisma.traceSpan.deleteMany();
     await prisma.toolDecision.deleteMany();
     await prisma.apiError.deleteMany();
     await prisma.toolResult.deleteMany();
@@ -217,6 +289,75 @@ describe("API Endpoints", () => {
       expect(res.status).toBe(200);
       expect(res.body.totalInputTokens).toBe(890);
       expect(res.body.totalOutputTokens).toBe(350);
+    });
+  });
+
+  describe("GET /api/sessions/:id/traces", () => {
+    it("should return trace spans for a session", async () => {
+      // Ingest trace data for the same session
+      await request(app)
+        .post("/v1/traces")
+        .set("Content-Type", "application/json")
+        .send(JSON.stringify(sampleTraces));
+
+      const res = await request(app).get("/api/sessions/session-trace-001/traces");
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].spanName).toBe("claude_code.llm_request");
+      expect(res.body[0].responseModelOutput).toBe("Hello! Tacos are delicious! How can I help you today?");
+    });
+
+    it("should return empty array for session with no traces", async () => {
+      const res = await request(app).get("/api/sessions/session-001/traces");
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(0);
+    });
+  });
+
+  describe("GET /api/traces", () => {
+    it("should list trace spans", async () => {
+      await request(app)
+        .post("/v1/traces")
+        .set("Content-Type", "application/json")
+        .send(JSON.stringify(sampleTraces));
+
+      const res = await request(app).get("/api/traces");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(1);
+      expect(res.body.total).toBe(1);
+    });
+
+    it("should filter by sessionId", async () => {
+      await request(app)
+        .post("/v1/traces")
+        .set("Content-Type", "application/json")
+        .send(JSON.stringify(sampleTraces));
+
+      const res = await request(app).get("/api/traces?sessionId=session-trace-001");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(1);
+
+      const resEmpty = await request(app).get("/api/traces?sessionId=nonexistent");
+      expect(resEmpty.body.data).toHaveLength(0);
+    });
+  });
+
+  describe("GET /api/traces/:spanId", () => {
+    it("should return span detail", async () => {
+      await request(app)
+        .post("/v1/traces")
+        .set("Content-Type", "application/json")
+        .send(JSON.stringify(sampleTraces));
+
+      const res = await request(app).get("/api/traces/541d2022b61d71c8");
+      expect(res.status).toBe(200);
+      expect(res.body.spanName).toBe("claude_code.llm_request");
+      expect(res.body.ttftMs).toBe(2114);
+    });
+
+    it("should return 404 for unknown span", async () => {
+      const res = await request(app).get("/api/traces/nonexistent");
+      expect(res.status).toBe(404);
     });
   });
 

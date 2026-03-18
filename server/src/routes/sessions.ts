@@ -67,6 +67,19 @@ router.get(
   }) as RequestHandler,
 );
 
+// GET /api/sessions/:id/traces — Trace spans for a session
+router.get(
+  "/:id/traces",
+  (async (req: Request, res: Response) => {
+    const spans = await prisma.traceSpan.findMany({
+      where: { sessionId: req.params.id as string },
+      orderBy: { startTime: "asc" },
+    });
+
+    res.json(spans);
+  }) as RequestHandler,
+);
+
 function serializeSession(session: any) {
   return {
     ...session,
