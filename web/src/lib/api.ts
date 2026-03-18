@@ -51,27 +51,6 @@ export function getSessionTraces(sessionId: string): Promise<TraceSpan[]> {
   return fetchJson(`/sessions/${sessionId}/traces`);
 }
 
-// --- Traces ---
-
-export function getTraces(params?: {
-  limit?: number;
-  offset?: number;
-  sessionId?: string;
-  model?: string;
-}): Promise<PaginatedResponse<TraceSpan>> {
-  const search = new URLSearchParams();
-  if (params?.limit) search.set("limit", String(params.limit));
-  if (params?.offset) search.set("offset", String(params.offset));
-  if (params?.sessionId) search.set("sessionId", params.sessionId);
-  if (params?.model) search.set("model", params.model);
-  const qs = search.toString();
-  return fetchJson(`/traces${qs ? `?${qs}` : ""}`);
-}
-
-export function getTraceSpan(spanId: string): Promise<TraceSpan> {
-  return fetchJson(`/traces/${spanId}`);
-}
-
 // --- Dashboard ---
 
 export function getDashboardStats(

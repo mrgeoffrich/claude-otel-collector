@@ -3,7 +3,7 @@ import prisma from "../lib/prisma";
 
 const router = Router();
 
-// GET /api/sessions — List sessions with aggregates
+// GET /api/sessions — List sessions with aggregates and first message preview
 router.get(
   "/",
   (async (req: Request, res: Response) => {
@@ -22,11 +22,29 @@ router.get(
         orderBy: { lastSeenAt: "desc" },
         take: limit,
         skip: offset,
+        include: {
+          traceSpans: {
+            orderBy: { startTime: "asc" },
+            take: 1,
+            select: { newContext: true, responseModelOutput: true },
+          },
+          _count: { select: { traceSpans: true } },
+        },
       }),
       prisma.session.count({ where }),
     ]);
 
-    const serialized = sessions.map(serializeSession);
+    const serialized = sessions.map((session) => {
+      const firstSpan = session.traceSpans[0];
+      const spanCount = session._count.traceSpans;
+      const { traceSpans, _count, ...rest } = session;
+      return {
+        ...serializeSession(rest),
+        spanCount,
+        firstMessage: firstSpan?.newContext || null,
+        firstResponse: firstSpan?.responseModelOutput || null,
+      };
+    });
 
     res.json({ data: serialized, total, limit, offset, hasMore: offset + limit < total });
   }) as RequestHandler,

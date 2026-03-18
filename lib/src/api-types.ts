@@ -16,6 +16,10 @@ export interface Session {
   totalApiCalls: number;
   totalToolCalls: number;
   totalErrors: number;
+  // Included in list responses
+  spanCount?: number;
+  firstMessage?: string | null;
+  firstResponse?: string | null;
 }
 
 export interface TraceSpan {

@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import { SessionsPage } from "./pages/sessions";
 import { SessionDetailPage } from "./pages/session-detail";
-import { TracesPage } from "./pages/traces";
 import { DashboardPage } from "./pages/dashboard";
 
 function NavItem({ to, children }: { to: string; children: React.ReactNode }) {
@@ -29,7 +28,6 @@ export default function App() {
         <nav className="w-56 border-r border-border bg-card p-4 flex flex-col gap-1">
           <h1 className="text-lg font-bold mb-4 px-4">OTEL Collector</h1>
           <NavItem to="/sessions">Sessions</NavItem>
-          <NavItem to="/traces">Traces</NavItem>
           <NavItem to="/dashboard">Dashboard</NavItem>
         </nav>
 
@@ -39,7 +37,6 @@ export default function App() {
             <Route path="/" element={<Navigate to="/sessions" replace />} />
             <Route path="/sessions" element={<SessionsPage />} />
             <Route path="/sessions/:id" element={<SessionDetailPage />} />
-            <Route path="/traces" element={<TracesPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
           </Routes>
         </main>
