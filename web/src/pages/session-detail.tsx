@@ -15,13 +15,21 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Markdown from "react-markdown";
+
+/**
+ * Strip common role prefixes from newContext (e.g., "[USER]\n", "[ASSISTANT]\n")
+ */
+function stripRolePrefix(text: string): string {
+  return text.replace(/^\[(?:USER|ASSISTANT|SYSTEM)\]\n?/i, "");
+}
 
 // --- Conversation View (Trace Spans) ---
 
 function ConversationTurn({ span }: { span: TraceSpan }) {
   const [expanded, setExpanded] = useState(false);
 
-  const userText = span.newContext;
+  const userText = span.newContext ? stripRolePrefix(span.newContext) : null;
   const assistantText = span.responseModelOutput;
   const hasContent = userText || assistantText;
 
@@ -48,8 +56,8 @@ function ConversationTurn({ span }: { span: TraceSpan }) {
             A
           </div>
           <div className="flex-1 min-w-0">
-            <div className="bg-card border border-border rounded-lg px-4 py-3 text-sm whitespace-pre-wrap break-words">
-              {assistantText}
+            <div className="bg-card border border-border rounded-lg px-4 py-3 text-sm markdown-body">
+              <Markdown>{assistantText}</Markdown>
             </div>
             {/* Inline metrics bar */}
             <button
