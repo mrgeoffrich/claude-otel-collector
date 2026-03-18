@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getSessions, type Session } from "@/lib/api";
-import { formatTokens, formatCost, formatRelativeTime } from "@/lib/format";
+import { formatTokens, formatRelativeTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 
 export function SessionsPage() {
@@ -71,11 +71,7 @@ export function SessionsPage() {
                   <span className="font-mono">
                     {formatTokens(session.totalInputTokens + session.totalOutputTokens)} tok
                   </span>
-                  <span className="font-mono">
-                    {formatCost(session.totalCostUsd)}
-                  </span>
-                  <span>{session.totalApiCalls} calls</span>
-                  <span>{session.totalToolCalls} tools</span>
+                  <span>{session.totalApiCalls} spans</span>
                   <span className="w-20 text-right">
                     {formatRelativeTime(session.lastSeenAt)}
                   </span>

@@ -77,7 +77,6 @@ export function TracesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Time</TableHead>
-              <TableHead>Span</TableHead>
               <TableHead>Model</TableHead>
               <TableHead>Session</TableHead>
               <TableHead className="text-right">TTFT</TableHead>
@@ -98,9 +97,6 @@ export function TracesPage() {
                 <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                   {formatRelativeTime(span.startTime)}
                 </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {span.spanName}
-                </TableCell>
                 <TableCell>
                   <Badge variant="secondary" className="text-xs">
                     {span.model || "-"}
@@ -112,7 +108,7 @@ export function TracesPage() {
                     className="text-primary hover:underline font-mono text-xs"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {span.sessionId.slice(0, 16)}...
+                    {span.sessionId.slice(0, 12)}...
                   </Link>
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm">
@@ -124,14 +120,14 @@ export function TracesPage() {
                 <TableCell className="text-right font-mono text-sm">
                   {formatTokens((span.inputTokens ?? 0) + (span.outputTokens ?? 0))}
                 </TableCell>
-                <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                <TableCell className="max-w-[180px] truncate text-xs text-muted-foreground">
                   {span.newContext
-                    ? span.newContext.slice(0, 60) + (span.newContext.length > 60 ? "..." : "")
+                    ? span.newContext.slice(0, 50) + (span.newContext.length > 50 ? "..." : "")
                     : "-"}
                 </TableCell>
-                <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                <TableCell className="max-w-[180px] truncate text-xs text-muted-foreground">
                   {span.responseModelOutput
-                    ? span.responseModelOutput.slice(0, 60) + (span.responseModelOutput.length > 60 ? "..." : "")
+                    ? span.responseModelOutput.slice(0, 50) + (span.responseModelOutput.length > 50 ? "..." : "")
                     : "-"}
                 </TableCell>
                 <TableCell className="text-center">

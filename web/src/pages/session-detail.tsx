@@ -6,7 +6,7 @@ import {
   type Session,
   type TraceSpan,
 } from "@/lib/api";
-import { formatTokens, formatCost, formatDuration, formatRelativeTime } from "@/lib/format";
+import { formatTokens, formatDuration, formatRelativeTime } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -352,6 +352,11 @@ export function SessionDetailPage() {
     return <div className="text-muted-foreground">Session not found</div>;
   }
 
+  // Compute stats from trace spans (more accurate than session aggregates)
+  const totalIn = traceSpans.reduce((s, sp) => s + (sp.inputTokens ?? 0), 0);
+  const totalOut = traceSpans.reduce((s, sp) => s + (sp.outputTokens ?? 0), 0);
+  const failedCount = traceSpans.filter((s) => s.success === false).length;
+
   return (
     <div>
       <Link
@@ -379,23 +384,17 @@ export function SessionDetailPage() {
             <div>
               <span className="text-muted-foreground">Tokens: </span>
               <span className="font-mono">
-                {formatTokens(session.totalInputTokens)} in / {formatTokens(session.totalOutputTokens)} out
-              </span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Cost: </span>
-              <span className="font-mono">
-                {formatCost(session.totalCostUsd)}
+                {formatTokens(totalIn)} in / {formatTokens(totalOut)} out
               </span>
             </div>
             <div>
               <span className="text-muted-foreground">Spans: </span>
               {traceSpans.length}
             </div>
-            {session.totalErrors > 0 && (
+            {failedCount > 0 && (
               <div>
-                <span className="text-muted-foreground">Errors: </span>
-                <Badge variant="destructive">{session.totalErrors}</Badge>
+                <span className="text-muted-foreground">Failures: </span>
+                <Badge variant="destructive">{failedCount}</Badge>
               </div>
             )}
           </div>
