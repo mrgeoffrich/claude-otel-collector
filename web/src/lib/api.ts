@@ -2,6 +2,7 @@ export type {
   Session,
   Prompt,
   TimelineEvent,
+  TraceSpan,
   DashboardStats,
   TokenUsageBucket,
   CostData,
@@ -13,6 +14,7 @@ import type {
   Session,
   Prompt,
   TimelineEvent,
+  TraceSpan,
   DashboardStats,
   TokenUsageBucket,
   CostData,
@@ -55,12 +57,35 @@ export function getSessionPrompts(sessionId: string): Promise<Prompt[]> {
   return fetchJson(`/sessions/${sessionId}/prompts`);
 }
 
+export function getSessionTraces(sessionId: string): Promise<TraceSpan[]> {
+  return fetchJson(`/sessions/${sessionId}/traces`);
+}
+
 export function getPrompt(id: string): Promise<Prompt> {
   return fetchJson(`/prompts/${id}`);
 }
 
 export function getPromptEvents(promptId: string): Promise<TimelineEvent[]> {
   return fetchJson(`/prompts/${promptId}/events`);
+}
+
+export function getTraces(params?: {
+  limit?: number;
+  offset?: number;
+  sessionId?: string;
+  model?: string;
+}): Promise<PaginatedResponse<TraceSpan>> {
+  const search = new URLSearchParams();
+  if (params?.limit) search.set("limit", String(params.limit));
+  if (params?.offset) search.set("offset", String(params.offset));
+  if (params?.sessionId) search.set("sessionId", params.sessionId);
+  if (params?.model) search.set("model", params.model);
+  const qs = search.toString();
+  return fetchJson(`/traces${qs ? `?${qs}` : ""}`);
+}
+
+export function getTraceSpan(spanId: string): Promise<TraceSpan> {
+  return fetchJson(`/traces/${spanId}`);
 }
 
 export function getDashboardStats(

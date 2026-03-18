@@ -2,6 +2,7 @@ export type {
   Session,
   Prompt,
   TimelineEvent,
+  TraceSpan,
   DashboardStats,
   TokenUsageBucket,
   CostData,
