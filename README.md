@@ -1,6 +1,6 @@
 # Claude OTEL Collector
 
-An OpenTelemetry collector and trace browser for the Claude Agent SDK. Receives OTLP/HTTP telemetry (logs, metrics, traces) from Claude Code and displays sessions, prompts, tool calls, token usage, and costs in a web UI.
+See exactly what your AI agent is doing under the hood. Claude OTEL Collector is a local OpenTelemetry collector and trace browser designed primarily for the Claude Agent SDK — it captures every LLM call, tool invocation, and token spent, then displays sessions, prompts, performance metrics, and costs in a web UI.
 
 ## Setup
 
@@ -22,24 +22,13 @@ npm run dev
 
 This starts both the server (port 4318) and the web UI (port 3110).
 
-## Configuring Claude Code / Agent SDK
+## Configuring Claude Code
 
-Set these environment variables in the shell where you run Claude Code or the Agent SDK so that telemetry is sent to this collector:
-
-```bash
-export CLAUDE_CODE_ENABLE_TELEMETRY=1
-export OTEL_LOGS_EXPORTER=otlp
-export OTEL_METRICS_EXPORTER=otlp
-export OTEL_TRACES_EXPORTER=otlp
-export OTEL_EXPORTER_OTLP_PROTOCOL=http/json
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-```
-
-Optional — capture prompt text and tool names (off by default for privacy):
+Set these environment variables in the shell where you run Claude Code so that telemetry is sent to this collector:
 
 ```bash
-export OTEL_LOG_USER_PROMPTS=1
-export OTEL_LOG_TOOL_DETAILS=1
+export BETA_TRACING_ENDPOINT=http://localhost:4318
+export ENABLE_BETA_TRACING_DETAILED=true
 ```
 
 Once configured, open http://localhost:3110 to view incoming telemetry.

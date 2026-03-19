@@ -62,6 +62,15 @@ Never use `prisma db push`. Always create migrations with `prisma migrate dev --
 - Byte fields (traceId, spanId) are lowercase hex strings, not base64
 - Default/zero values may be omitted entirely
 
+## Configuring Claude Code
+
+To send telemetry to this collector, set these env vars in the shell running Claude Code:
+
+```bash
+export BETA_TRACING_ENDPOINT=http://localhost:4318
+export ENABLE_BETA_TRACING_DETAILED=true
+```
+
 ## Testing
 
 - Vitest with supertest for integration tests against the Express app
