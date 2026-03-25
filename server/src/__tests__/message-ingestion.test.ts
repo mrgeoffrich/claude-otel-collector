@@ -654,6 +654,100 @@ describe("tap:query_params handling", () => {
   });
 });
 
+describe("tap:query_params with nested message format", () => {
+  it("should extract session_id from message body when envelope session_id is empty", async () => {
+    const envelope = {
+      sequence: 1,
+      timestamp: "2026-03-25T10:00:00.000Z",
+      type: "tap:query_params",
+      subtype: null,
+      session_id: "",
+      uuid: "msg-qp-nested-001",
+      message: {
+        type: "user",
+        message: { role: "user", content: "what containers are running?" },
+        parent_tool_use_id: null,
+        session_id: "target-session-123",
+      },
+    };
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    // Session should be created with the ID from the message body
+    const session = await prisma.agentSession.findUnique({
+      where: { id: "target-session-123" },
+    });
+    expect(session).not.toBeNull();
+    expect(session!.initialPrompt).toBe("what containers are running?");
+
+    // Agent message should be stored under the correct session
+    const agentMsg = await prisma.agentMessage.findUnique({
+      where: { uuid: "msg-qp-nested-001" },
+    });
+    expect(agentMsg!.sessionId).toBe("target-session-123");
+
+    // Conversation message should be created with correct session and content
+    const convMsg = await prisma.conversationMessage.findUnique({
+      where: { uuid: "msg-qp-nested-001" },
+    });
+    expect(convMsg).not.toBeNull();
+    expect(convMsg!.sessionId).toBe("target-session-123");
+    expect(convMsg!.role).toBe("user");
+    expect(convMsg!.userContent).toBe("what containers are running?");
+  });
+
+  it("should generate a UUID when envelope uuid is empty", async () => {
+    const envelope = {
+      sequence: 1,
+      timestamp: "2026-03-25T10:00:00.000Z",
+      type: "tap:query_params",
+      subtype: null,
+      session_id: "test-session-uuid-gen",
+      uuid: "",
+      message: {
+        type: "user",
+        message: { role: "user", content: "hello world" },
+        parent_tool_use_id: null,
+        session_id: "test-session-uuid-gen",
+      },
+    };
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    // Should have created a message with a generated UUID
+    const messages = await prisma.agentMessage.findMany({
+      where: { sessionId: "test-session-uuid-gen" },
+    });
+    expect(messages).toHaveLength(1);
+    expect(messages[0].uuid).toBeTruthy();
+    expect(messages[0].uuid.length).toBeGreaterThan(0);
+  });
+
+  it("should skip envelopes with no session_id anywhere", async () => {
+    const envelope = {
+      sequence: 1,
+      timestamp: "2026-03-25T10:00:00.000Z",
+      type: "tap:query_params",
+      subtype: null,
+      session_id: "",
+      uuid: "msg-qp-nosession",
+      message: {
+        type: "user",
+        message: { role: "user", content: "orphan message" },
+        parent_tool_use_id: null,
+      },
+    };
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    // No message should be stored
+    const agentMsg = await prisma.agentMessage.findUnique({
+      where: { uuid: "msg-qp-nosession" },
+    });
+    expect(agentMsg).toBeNull();
+  });
+});
+
 describe("Sub-task message handling", () => {
   it("should create a ConversationMessage for system:task_started", async () => {
     const envelope = makeEnvelope({

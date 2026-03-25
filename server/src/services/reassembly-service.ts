@@ -213,7 +213,16 @@ function extractToolSummaryFields(msg: Record<string, unknown>): ConversationFie
 }
 
 function extractQueryParamsFields(msg: Record<string, unknown>): ConversationFields {
-  const prompt = typeof msg.prompt === "string" ? msg.prompt : null;
+  // Prompt can be at msg.prompt (legacy) or msg.message.content (current SDK format)
+  let prompt: string | null = null;
+  if (typeof msg.prompt === "string") {
+    prompt = msg.prompt;
+  } else {
+    const inner = msg.message as Record<string, unknown> | undefined;
+    if (typeof inner?.content === "string") {
+      prompt = inner.content;
+    }
+  }
   return {
     role: "user",
     userContent: prompt,

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { MessageEnvelope } from "@claude-otel/lib";
 import prisma from "../lib/prisma";
 import { appLogger } from "../lib/logger";
@@ -43,6 +44,26 @@ export async function processMessageEnvelopes(
 async function processEnvelope(envelope: MessageEnvelope): Promise<void> {
   const timestamp = new Date(envelope.timestamp);
   const msg = envelope.message as Record<string, unknown>;
+
+  // tap:query_params may arrive before session_id is assigned on the envelope;
+  // fall back to session_id inside the message body if the envelope's is empty.
+  if (!envelope.session_id && typeof msg.session_id === "string" && msg.session_id) {
+    envelope.session_id = msg.session_id;
+  }
+
+  // Skip messages with no session_id — can't associate them
+  if (!envelope.session_id) {
+    appLogger.warn(
+      { type: envelope.type, uuid: envelope.uuid },
+      "Skipping envelope with no session_id",
+    );
+    return;
+  }
+
+  // Generate a UUID for envelopes that arrive without one to prevent upsert collisions
+  if (!envelope.uuid) {
+    envelope.uuid = randomUUID();
+  }
 
   // Upsert session
   await upsertAgentSession(envelope.session_id, timestamp);
@@ -215,8 +236,17 @@ function extractMetadata(
     case "tap:query_params": {
       const model =
         typeof msg.model === "string" ? msg.model : undefined;
-      const contentPreview =
-        typeof msg.prompt === "string" ? msg.prompt.slice(0, 200) : undefined;
+      // Prompt can be at msg.prompt (legacy) or msg.message.content (current SDK format)
+      let prompt: string | undefined;
+      if (typeof msg.prompt === "string") {
+        prompt = msg.prompt;
+      } else {
+        const inner = msg.message as Record<string, unknown> | undefined;
+        if (typeof inner?.content === "string") {
+          prompt = inner.content;
+        }
+      }
+      const contentPreview = prompt ? prompt.slice(0, 200) : undefined;
       return { model, contentPreview };
     }
 

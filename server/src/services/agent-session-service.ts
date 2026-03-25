@@ -87,12 +87,22 @@ export async function updateSessionFromQueryParams(
   sessionId: string,
   msg: Record<string, unknown>,
 ): Promise<void> {
+  // The prompt can be at msg.prompt (legacy) or msg.message.content (current SDK format)
+  let prompt: string | undefined;
+  if (typeof msg.prompt === "string") {
+    prompt = msg.prompt;
+  } else {
+    const inner = msg.message as Record<string, unknown> | undefined;
+    if (typeof inner?.content === "string") {
+      prompt = inner.content;
+    }
+  }
+
   await prisma.agentSession.update({
     where: { id: sessionId },
     data: {
       cwd: typeof msg.cwd === "string" ? msg.cwd : undefined,
-      initialPrompt:
-        typeof msg.prompt === "string" ? msg.prompt.slice(0, 500) : undefined,
+      initialPrompt: prompt ? prompt.slice(0, 500) : undefined,
       maxBudgetUsd:
         typeof msg.maxBudgetUsd === "number" ? msg.maxBudgetUsd : undefined,
       // Also pick up model/permissionMode if system:init hasn't arrived yet
