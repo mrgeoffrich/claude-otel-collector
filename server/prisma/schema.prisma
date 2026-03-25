@@ -14,6 +14,9 @@ model AgentSession {
   model              String?  // from system:init
   claudeCodeVersion  String?  // from system:init
   permissionMode     String?  // from system:init
+  cwd                String?  // from tap:query_params
+  initialPrompt      String?  // from tap:query_params (first ~500 chars)
+  maxBudgetUsd       Float?   // from tap:query_params
   tools              String?  // JSON array of tool names
   toolsCount         Int?
   messageCount       Int      @default(0)

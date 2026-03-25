@@ -17,6 +17,9 @@ export interface AgentSessionResponse {
   model: string | null;
   claudeCodeVersion: string | null;
   permissionMode: string | null;
+  cwd: string | null;
+  initialPrompt: string | null;
+  maxBudgetUsd: number | null;
   tools: string | null;
   toolsCount: number | null;
   messageCount: number;

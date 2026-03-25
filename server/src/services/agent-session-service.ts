@@ -81,6 +81,29 @@ export async function updateSessionFromResult(
 }
 
 /**
+ * Update session with data from a tap:query_params message.
+ */
+export async function updateSessionFromQueryParams(
+  sessionId: string,
+  msg: Record<string, unknown>,
+): Promise<void> {
+  await prisma.agentSession.update({
+    where: { id: sessionId },
+    data: {
+      cwd: typeof msg.cwd === "string" ? msg.cwd : undefined,
+      initialPrompt:
+        typeof msg.prompt === "string" ? msg.prompt.slice(0, 500) : undefined,
+      maxBudgetUsd:
+        typeof msg.maxBudgetUsd === "number" ? msg.maxBudgetUsd : undefined,
+      // Also pick up model/permissionMode if system:init hasn't arrived yet
+      model: typeof msg.model === "string" ? msg.model : undefined,
+      permissionMode:
+        typeof msg.permissionMode === "string" ? msg.permissionMode : undefined,
+    },
+  });
+}
+
+/**
  * Update session status from a session_state_changed message.
  */
 export async function updateSessionStatus(

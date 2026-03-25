@@ -519,3 +519,91 @@ describe("GET /api/sessions/:id/conversation", () => {
       .expect(404);
   });
 });
+
+describe("tap:query_params handling", () => {
+  it("should store query params on the session", async () => {
+    const envelope = makeEnvelope({
+      sequence: 0,
+      uuid: "msg-qp-001",
+      type: "tap:query_params",
+      subtype: null,
+      message: {
+        type: "tap:query_params",
+        prompt: "Fix the login bug",
+        model: "claude-sonnet-4-20250514",
+        cwd: "/Users/dev/my-project",
+        permissionMode: "default",
+        maxBudgetUsd: 5.0,
+        timestamp: "2026-03-25T10:00:00.000Z",
+      },
+    });
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    const session = await prisma.agentSession.findUnique({
+      where: { id: "test-session-1" },
+    });
+    expect(session).not.toBeNull();
+    expect(session!.cwd).toBe("/Users/dev/my-project");
+    expect(session!.initialPrompt).toBe("Fix the login bug");
+    expect(session!.maxBudgetUsd).toBe(5.0);
+    expect(session!.model).toBe("claude-sonnet-4-20250514");
+    expect(session!.permissionMode).toBe("default");
+  });
+
+  it("should store message with extracted metadata", async () => {
+    const envelope = makeEnvelope({
+      sequence: 0,
+      uuid: "msg-qp-002",
+      type: "tap:query_params",
+      subtype: null,
+      message: {
+        type: "tap:query_params",
+        prompt: "Refactor the database layer to use connection pooling",
+        model: "claude-opus-4-20250514",
+        cwd: "/Users/dev/project",
+        timestamp: "2026-03-25T10:00:00.000Z",
+      },
+    });
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    const message = await prisma.agentMessage.findUnique({
+      where: { uuid: "msg-qp-002" },
+    });
+    expect(message).not.toBeNull();
+    expect(message!.type).toBe("tap:query_params");
+    expect(message!.model).toBe("claude-opus-4-20250514");
+    expect(message!.contentPreview).toBe(
+      "Refactor the database layer to use connection pooling",
+    );
+  });
+
+  it("should truncate long prompts in initialPrompt and contentPreview", async () => {
+    const longPrompt = "x".repeat(1000);
+    const envelope = makeEnvelope({
+      sequence: 0,
+      uuid: "msg-qp-003",
+      type: "tap:query_params",
+      subtype: null,
+      message: {
+        type: "tap:query_params",
+        prompt: longPrompt,
+        cwd: "/tmp",
+        timestamp: "2026-03-25T10:00:00.000Z",
+      },
+    });
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    const session = await prisma.agentSession.findUnique({
+      where: { id: "test-session-1" },
+    });
+    expect(session!.initialPrompt).toHaveLength(500);
+
+    const message = await prisma.agentMessage.findUnique({
+      where: { uuid: "msg-qp-003" },
+    });
+    expect(message!.contentPreview).toHaveLength(200);
+  });
+});

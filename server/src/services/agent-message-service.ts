@@ -5,6 +5,7 @@ import {
   upsertAgentSession,
   updateSessionFromInit,
   updateSessionFromResult,
+  updateSessionFromQueryParams,
   updateSessionStatus,
 } from "./agent-session-service";
 import { reassembleMessage } from "./reassembly-service";
@@ -85,6 +86,8 @@ async function processEnvelope(envelope: MessageEnvelope): Promise<void> {
     await updateSessionFromInit(envelope.session_id, msg);
   } else if (envelope.type === "result") {
     await updateSessionFromResult(envelope.session_id, msg);
+  } else if (envelope.type === "tap:query_params") {
+    await updateSessionFromQueryParams(envelope.session_id, msg);
   } else if (
     envelope.type === "system" &&
     envelope.subtype === "session_state_changed"
@@ -180,6 +183,14 @@ function extractMetadata(
         return { model };
       }
       return {};
+    }
+
+    case "tap:query_params": {
+      const model =
+        typeof msg.model === "string" ? msg.model : undefined;
+      const contentPreview =
+        typeof msg.prompt === "string" ? msg.prompt.slice(0, 200) : undefined;
+      return { model, contentPreview };
     }
 
     default:
