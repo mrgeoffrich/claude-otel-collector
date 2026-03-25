@@ -1,7 +1,11 @@
 {
   "name": "claude-otel-collector",
   "private": true,
-  "workspaces": ["lib", "server", "web"],
+  "workspaces": [
+    "lib",
+    "server",
+    "web"
+  ],
   "scripts": {
     "dev:server": "npm run build:lib && cd server && npm run dev",
     "dev:web": "npm run build:lib && cd web && npm run dev",

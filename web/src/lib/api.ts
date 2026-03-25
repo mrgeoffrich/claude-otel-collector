@@ -1,20 +1,10 @@
-export type {
-  Session,
-  TraceSpan,
-  DashboardStats,
-  TokenUsageBucket,
-  CostData,
+import type {
+  AgentSessionResponse,
+  ConversationMessageResponse,
   PaginatedResponse,
 } from "@claude-otel/lib";
 
-import type {
-  Session,
-  TraceSpan,
-  DashboardStats,
-  TokenUsageBucket,
-  CostData,
-  PaginatedResponse,
-} from "@claude-otel/lib";
+export type { AgentSessionResponse, ConversationMessageResponse, PaginatedResponse };
 
 const BASE_URL = "/api";
 
@@ -26,43 +16,29 @@ async function fetchJson<T>(path: string): Promise<T> {
   return res.json();
 }
 
-// --- Sessions ---
-
 export function getSessions(params?: {
   limit?: number;
   offset?: number;
-  model?: string;
-  hasErrors?: boolean;
-}): Promise<PaginatedResponse<Session>> {
+}): Promise<PaginatedResponse<AgentSessionResponse>> {
   const search = new URLSearchParams();
   if (params?.limit) search.set("limit", String(params.limit));
   if (params?.offset) search.set("offset", String(params.offset));
-  if (params?.model) search.set("model", params.model);
-  if (params?.hasErrors) search.set("hasErrors", "true");
   const qs = search.toString();
   return fetchJson(`/sessions${qs ? `?${qs}` : ""}`);
 }
 
-export function getSession(id: string): Promise<Session> {
+export function getSession(id: string): Promise<AgentSessionResponse> {
   return fetchJson(`/sessions/${id}`);
 }
 
-export function getSessionTraces(sessionId: string): Promise<TraceSpan[]> {
-  return fetchJson(`/sessions/${sessionId}/traces`);
-}
-
-// --- Dashboard ---
-
-export function getDashboardStats(
-  hours?: number,
-): Promise<DashboardStats> {
-  return fetchJson(`/dashboard/stats${hours ? `?hours=${hours}` : ""}`);
-}
-
-export function getTokenUsage(hours?: number): Promise<TokenUsageBucket[]> {
-  return fetchJson(`/dashboard/token-usage${hours ? `?hours=${hours}` : ""}`);
-}
-
-export function getCostData(hours?: number): Promise<CostData> {
-  return fetchJson(`/dashboard/cost${hours ? `?hours=${hours}` : ""}`);
+export function getConversation(
+  id: string,
+  params?: { limit?: number; offset?: number; role?: string },
+): Promise<PaginatedResponse<ConversationMessageResponse>> {
+  const search = new URLSearchParams();
+  if (params?.limit) search.set("limit", String(params.limit));
+  if (params?.offset) search.set("offset", String(params.offset));
+  if (params?.role) search.set("role", params.role);
+  const qs = search.toString();
+  return fetchJson(`/sessions/${id}/conversation${qs ? `?${qs}` : ""}`);
 }

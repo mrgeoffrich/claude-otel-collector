@@ -7,10 +7,8 @@ import { httpLogger } from "./lib/logger";
 import { requestIdMiddleware } from "./lib/request-id";
 import { errorHandler, notFoundHandler } from "./lib/error-handler";
 
-import otlpRoutes from "./routes/otlp";
-import sessionRoutes from "./routes/sessions";
-import dashboardRoutes from "./routes/dashboard";
-import traceRoutes from "./routes/traces";
+import messagesRoutes from "./routes/messages";
+import agentSessionRoutes from "./routes/agent-sessions";
 
 const app: express.Application = express();
 
@@ -23,9 +21,9 @@ app.use(
     logger: httpLogger,
     autoLogging: {
       ignore: (req) => {
-        // Don't log OTLP ingestion requests at info level (too noisy)
+        // Don't log message ingestion requests at info level (too noisy)
         const url = (req as any).url || "";
-        return url.startsWith("/v1/");
+        return url.startsWith("/messages");
       },
     },
   }),
@@ -39,8 +37,9 @@ app.use(
   }),
 );
 
-// JSON body parsing for API routes (OTLP routes use express.raw() instead)
+// JSON body parsing for API routes and message ingestion
 app.use("/api", express.json({ limit: "10mb" }));
+app.use("/messages", express.json({ limit: "10mb" }));
 
 // Health check
 app.get("/health", ((req: Request, res: Response) => {
@@ -52,13 +51,11 @@ app.get("/health", ((req: Request, res: Response) => {
   });
 }) as RequestHandler);
 
-// OTLP ingestion routes (at root, not under /api)
-app.use(otlpRoutes);
+// Message ingestion route (from agent SDK tap)
+app.use(messagesRoutes);
 
 // API routes for frontend
-app.use("/api/sessions", sessionRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/traces", traceRoutes);
+app.use("/api/sessions", agentSessionRoutes);
 
 // 404 handler
 app.use(notFoundHandler as RequestHandler);

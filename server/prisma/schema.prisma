@@ -7,84 +7,87 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Session {
-  id                     String   @id // session.id from SDK
-  userId                 String?
-  orgId                  String?
-  model                  String?
-  appVersion             String?
-  firstSeenAt            DateTime
-  lastSeenAt             DateTime
-  totalInputTokens       BigInt   @default(0)
-  totalOutputTokens      BigInt   @default(0)
-  totalCacheReadTokens   BigInt   @default(0)
-  totalCacheCreationTokens BigInt @default(0)
-  totalCostUsd           Float    @default(0)
-  totalApiCalls          Int      @default(0)
-  totalToolCalls         Int      @default(0)
-  totalErrors            Int      @default(0)
+model AgentSession {
+  id                 String   @id // session_id from envelope
+  firstSeenAt        DateTime
+  lastSeenAt         DateTime
+  model              String?  // from system:init
+  claudeCodeVersion  String?  // from system:init
+  permissionMode     String?  // from system:init
+  tools              String?  // JSON array of tool names
+  toolsCount         Int?
+  messageCount       Int      @default(0)
+  status             String?  // latest: idle/running/requires_action
 
-  traceSpans TraceSpan[]
+  // Result fields (populated when result message arrives)
+  totalCostUsd       Float?
+  durationMs         Int?
+  numTurns           Int?
+  isError            Boolean?
+
+  messages AgentMessage[]
+  conversationMessages ConversationMessage[]
 
   @@index([lastSeenAt(sort: Desc)])
-  @@map("sessions")
+  @@map("agent_sessions")
 }
 
-model TraceSpan {
-  id                     String   @id @default(cuid())
-  traceId                String
-  spanId                 String   @unique
-  parentSpanId           String?
-  sessionId              String
-  spanName               String   // e.g., "claude_code.llm_request"
-  spanKind               Int?
-  startTime              DateTime
-  endTime                DateTime?
-  durationMs             Int?
+model AgentMessage {
+  id              String   @id @default(cuid())
+  sessionId       String
+  sequence        Int
+  timestamp       DateTime
+  uuid            String   @unique
+  type            String   // assistant, user, result, system, stream_event, etc.
+  subtype         String?  // for system messages: init, status, api_retry, etc.
+  rawMessage      String   // full JSON of the message field
 
-  // LLM request fields
-  model                  String?
-  querySource            String?  // "sdk", etc.
-  inputTokens            Int?
-  outputTokens           Int?
-  cacheReadTokens        Int?
-  cacheCreationTokens    Int?
-  success                Boolean?
-  attempt                Int?
-  ttftMs                 Int?
-  speed                  String?
+  // Extracted metadata (queryable)
+  model           String?  // from assistant messages
+  parentToolUseId String?  // links tool call chains
+  toolName        String?  // from tool_progress
+  toolUseId       String?  // from tool_progress
+  contentPreview  String?  // first ~200 chars of text content
+  costUsd         Float?   // from result messages
+  durationMs      Int?     // from result messages
+  numTurns        Int?     // from result messages
+  isError         Boolean? // from result messages
 
-  // Rich content
-  systemPromptPreview    String?
-  systemPromptHash       String?
-  systemPromptLength     Int?
-  tools                  String?  // JSON array of tool definitions
-  toolsCount             Int?
-  newContext              String?  // User input
-  newContextMessageCount Int?
-  systemReminders        String?
-  systemRemindersCount   Int?
-  responseModelOutput    String?
-  responseHasToolCall    Boolean?
-
-  // Catch-all
-  attributes             String?  // JSON string
-
-  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
-  @@index([traceId])
-  @@index([startTime(sort: Desc)])
-  @@map("trace_spans")
+  @@index([type])
+  @@index([timestamp(sort: Desc)])
+  @@map("agent_messages")
 }
 
-model MetricSnapshot {
-  id         String   @id @default(cuid())
-  timestamp  DateTime
-  metricName String
-  value      Float
-  attributes String?  // JSON string
+model ConversationMessage {
+  id              String   @id @default(cuid())
+  sessionId       String
+  sequence        Int
+  timestamp       DateTime
+  uuid            String   @unique
+  role            String
 
-  @@index([metricName, timestamp(sort: Desc)])
-  @@map("metric_snapshots")
+  userContent     String?
+  textContent     String?
+  toolCalls       String?
+  toolCallCount   Int?
+  model           String?
+  stopReason      String?
+
+  costUsd         Float?
+  durationMs      Int?
+  numTurns        Int?
+  isError         Boolean?
+  resultText      String?
+
+  toolSummary     String?
+
+  parentToolUseId String?
+
+  session AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, sequence])
+  @@map("conversation_messages")
 }

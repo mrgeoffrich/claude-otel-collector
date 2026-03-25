@@ -1,92 +1,78 @@
 // Shared API response types used by both server and web
 
-export interface Session {
+export interface MessageEnvelope {
+  sequence: number;
+  timestamp: string;
+  type: string;
+  subtype: string | null;
+  session_id: string;
+  uuid: string;
+  message: unknown;
+}
+
+export interface AgentSessionResponse {
   id: string;
-  userId: string | null;
-  orgId: string | null;
-  model: string | null;
-  appVersion: string | null;
   firstSeenAt: string;
   lastSeenAt: string;
-  totalInputTokens: number;
-  totalOutputTokens: number;
-  totalCacheReadTokens: number;
-  totalCacheCreationTokens: number;
-  totalCostUsd: number;
-  totalApiCalls: number;
-  totalToolCalls: number;
-  totalErrors: number;
-  // Included in list responses
-  spanCount?: number;
-  firstMessage?: string | null;
-  firstResponse?: string | null;
-}
-
-export interface TraceSpan {
-  id: string;
-  traceId: string;
-  spanId: string;
-  parentSpanId: string | null;
-  sessionId: string;
-  spanName: string;
-  spanKind: number | null;
-  startTime: string;
-  endTime: string | null;
-  durationMs: number | null;
   model: string | null;
-  querySource: string | null;
-  inputTokens: number | null;
-  outputTokens: number | null;
-  cacheReadTokens: number | null;
-  cacheCreationTokens: number | null;
-  success: boolean | null;
-  attempt: number | null;
-  ttftMs: number | null;
-  speed: string | null;
-  systemPromptPreview: string | null;
-  systemPromptHash: string | null;
-  systemPromptLength: number | null;
+  claudeCodeVersion: string | null;
+  permissionMode: string | null;
   tools: string | null;
   toolsCount: number | null;
-  newContext: string | null;
-  newContextMessageCount: number | null;
-  systemReminders: string | null;
-  systemRemindersCount: number | null;
-  responseModelOutput: string | null;
-  responseHasToolCall: boolean | null;
-  attributes: string | null;
+  messageCount: number;
+  status: string | null;
+  totalCostUsd: number | null;
+  durationMs: number | null;
+  numTurns: number | null;
+  isError: boolean | null;
 }
 
-export interface DashboardStats {
-  hours: number;
-  sessions: number;
-  spans: number;
-  failedSpans: number;
-  totalInputTokens: number;
-  totalOutputTokens: number;
-  totalCacheReadTokens: number;
-  totalCacheCreationTokens: number;
-  cacheHitRate: number;
-  avgTtftMs: number | null;
-  avgDurationMs: number | null;
-}
-
-export interface TokenUsageBucket {
+export interface AgentMessageResponse {
+  id: string;
+  sessionId: string;
+  sequence: number;
   timestamp: string;
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  cacheCreationTokens: number;
+  uuid: string;
+  type: string;
+  subtype: string | null;
+  rawMessage: string;
+  model: string | null;
+  parentToolUseId: string | null;
+  toolName: string | null;
+  toolUseId: string | null;
+  contentPreview: string | null;
+  costUsd: number | null;
+  durationMs: number | null;
+  numTurns: number | null;
+  isError: boolean | null;
 }
 
-export interface CostData {
-  sessionCosts: Array<{
-    id: string;
-    model: string | null;
-    totalCostUsd: number;
-    lastSeenAt: string;
-  }>;
-  modelDistribution: Record<string, { count: number; cost: number }>;
+export interface ToolCallEntry {
+  id: string;
+  name: string;
+  input: unknown;
+}
+
+export interface ConversationMessageResponse {
+  id: string;
+  sessionId: string;
+  sequence: number;
+  timestamp: string;
+  uuid: string;
+  role: string;
+  userContent: string | null;
+  textContent: string | null;
+  toolCalls: string | null;
+  toolCallCount: number | null;
+  model: string | null;
+  stopReason: string | null;
+  costUsd: number | null;
+  durationMs: number | null;
+  numTurns: number | null;
+  isError: boolean | null;
+  resultText: string | null;
+  toolSummary: string | null;
+  parentToolUseId: string | null;
 }
 
 export interface PaginatedResponse<T> {

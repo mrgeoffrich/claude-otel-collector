@@ -20,7 +20,7 @@ const startServer = async () => {
         `Health: http://localhost:${config.port}/health`,
       );
       appLogger.info(
-        `OTLP endpoint: http://localhost:${config.port}/v1/logs`,
+        `Messages endpoint: http://localhost:${config.port}/messages`,
       );
     }
   });

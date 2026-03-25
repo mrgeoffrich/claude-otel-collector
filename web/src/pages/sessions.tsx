@@ -1,157 +1,103 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getSessions, type Session } from "@/lib/api";
-import { formatTokens, formatRelativeTime } from "@/lib/format";
+import { getSessions } from "@/lib/api";
+import type { AgentSessionResponse } from "@claude-otel/lib";
 import { Badge } from "@/components/ui/badge";
-
-/**
- * Strip common role prefixes from newContext (e.g., "[USER]\n")
- */
-function stripRolePrefix(text: string): string {
-  return text.replace(/^\[(?:USER|ASSISTANT|SYSTEM)\]\n?/i, "");
-}
-
-/**
- * Strip markdown formatting for plain-text preview
- */
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, "$1")  // **bold**
-    .replace(/\*(.*?)\*/g, "$1")       // *italic*
-    .replace(/`(.*?)`/g, "$1")         // `code`
-    .replace(/^#+\s+/gm, "")           // # headings
-    .replace(/^[-*]\s+/gm, "")         // - list items
-    .replace(/\n/g, " ")               // newlines to spaces
-    .replace(/\s+/g, " ")              // collapse whitespace
-    .trim();
-}
+import { formatCost, formatRelativeTime } from "@/lib/format";
 
 export function SessionsPage() {
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessions, setSessions] = useState<AgentSessionResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const load = () => {
-      getSessions({ limit: 50 })
-        .then((res) => setSessions(res.data))
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    };
+    let mounted = true;
+
+    async function load() {
+      try {
+        const res = await getSessions({ limit: 50 });
+        if (mounted) {
+          setSessions(res.data);
+          setError(null);
+        }
+      } catch {
+        if (mounted) setError("Failed to load sessions");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
     load();
     const interval = setInterval(load, 5000);
-    return () => clearInterval(interval);
+    return () => { mounted = false; clearInterval(interval); };
   }, []);
 
   if (loading) {
-    return <div className="text-muted-foreground">Loading sessions...</div>;
+    return <p className="text-muted-foreground text-sm">Loading sessions...</p>;
+  }
+
+  if (error) {
+    return <p className="text-destructive text-sm">{error}</p>;
   }
 
   if (sessions.length === 0) {
     return (
-      <div className="text-center py-20 text-muted-foreground">
-        <p className="text-lg font-medium">No sessions yet</p>
-        <p className="mt-2 text-sm">
-          Configure your Claude Agent SDK with OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">No sessions yet.</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Point your agent's HTTP sink at this server to start collecting messages.
         </p>
       </div>
     );
   }
 
-  // Only show sessions that have trace spans
-  const activeSessions = sessions.filter((s) => (s.spanCount ?? 0) > 0);
-  const emptySessions = sessions.filter((s) => (s.spanCount ?? 0) === 0);
+  const active = sessions.filter((s) => s.messageCount > 0);
+  const empty = sessions.filter((s) => s.messageCount === 0);
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Sessions</h2>
-      <div className="space-y-2">
-        {activeSessions.map((session) => {
-          const preview = session.firstMessage
-            ? stripRolePrefix(session.firstMessage)
-            : null;
-          const responsePreview = session.firstResponse
-            ? stripMarkdown(session.firstResponse).slice(0, 140)
-            : null;
-
-          return (
-            <Link
-              key={session.id}
-              to={`/sessions/${session.id}`}
-              className="block group"
-            >
-              <div className="border border-border rounded-lg px-4 py-3 hover:bg-muted/30 transition-colors">
-                {/* Top row: ID, model, metrics */}
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {session.id.slice(0, 8)}
-                  </span>
-                  <Badge variant="secondary" className="text-[10px] shrink-0">
-                    {session.model || "unknown"}
-                  </Badge>
-                  {session.totalErrors > 0 && (
-                    <Badge variant="destructive" className="text-[10px] shrink-0">
-                      {session.totalErrors} err
-                    </Badge>
-                  )}
-                  <div className="flex-1" />
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">
-                    <span className="font-mono">
-                      {formatTokens(session.totalInputTokens + session.totalOutputTokens)} tok
-                    </span>
-                    <span>{session.spanCount} spans</span>
-                    <span>{formatRelativeTime(session.lastSeenAt)}</span>
-                  </div>
-                </div>
-
-                {/* Preview of first user message */}
-                {preview && (
-                  <p className="mt-1.5 text-sm text-foreground truncate group-hover:text-primary transition-colors">
-                    {preview}
-                  </p>
-                )}
-
-                {/* Preview of first response (truncated, markdown stripped) */}
-                {responsePreview && (
-                  <p className="mt-0.5 text-xs text-muted-foreground truncate">
-                    {responsePreview}
-                  </p>
-                )}
-              </div>
-            </Link>
-          );
-        })}
-
-        {/* Old sessions without trace data */}
-        {emptySessions.length > 0 && (
-          <>
-            <div className="text-xs text-muted-foreground pt-4 pb-1">
-              {emptySessions.length} older session{emptySessions.length !== 1 ? "s" : ""} without trace data
-            </div>
-            {emptySessions.map((session) => (
-              <Link
-                key={session.id}
-                to={`/sessions/${session.id}`}
-                className="block group"
-              >
-                <div className="border border-border rounded-lg px-3 py-2 hover:bg-muted/30 transition-colors opacity-50">
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {session.id.slice(0, 8)}
-                    </span>
-                    <Badge variant="secondary" className="text-[10px] shrink-0">
-                      {session.model || "unknown"}
-                    </Badge>
-                    <div className="flex-1" />
-                    <span className="text-xs text-muted-foreground">
-                      {formatRelativeTime(session.lastSeenAt)}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </>
-        )}
-      </div>
+    <div className="space-y-3">
+      <h2 className="text-lg font-semibold">Sessions</h2>
+      {active.map((session) => (
+        <SessionCard key={session.id} session={session} />
+      ))}
+      {empty.length > 0 && (
+        <>
+          <h3 className="text-sm text-muted-foreground mt-6">Empty Sessions</h3>
+          {empty.map((session) => (
+            <SessionCard key={session.id} session={session} dimmed />
+          ))}
+        </>
+      )}
     </div>
+  );
+}
+
+function SessionCard({ session, dimmed }: { session: AgentSessionResponse; dimmed?: boolean }) {
+  return (
+    <Link
+      to={`/sessions/${session.id}`}
+      className={`block rounded-xl bg-card p-4 ring-1 ring-foreground/10 hover:ring-foreground/20 transition-all ${dimmed ? "opacity-50" : ""}`}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <code className="text-xs font-mono text-muted-foreground">{session.id.slice(0, 8)}</code>
+          {session.model && (
+            <Badge variant="secondary">{session.model.replace("claude-", "").split("-202")[0]}</Badge>
+          )}
+          {session.isError && <Badge variant="destructive">Error</Badge>}
+          {session.status === "running" && <Badge variant="outline">Running</Badge>}
+        </div>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          {formatRelativeTime(session.lastSeenAt)}
+        </span>
+      </div>
+      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+        {session.totalCostUsd != null && session.totalCostUsd > 0 && (
+          <span>{formatCost(session.totalCostUsd)}</span>
+        )}
+        {session.numTurns != null && <span>{session.numTurns} turns</span>}
+        <span>{session.messageCount} messages</span>
+      </div>
+    </Link>
   );
 }
