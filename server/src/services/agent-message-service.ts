@@ -182,6 +182,33 @@ function extractMetadata(
           typeof msg.model === "string" ? msg.model : undefined;
         return { model };
       }
+      if (subtype === "task_started") {
+        const contentPreview =
+          typeof msg.description === "string"
+            ? msg.description.slice(0, 200)
+            : undefined;
+        const toolUseId =
+          typeof msg.tool_use_id === "string" ? msg.tool_use_id : undefined;
+        return { contentPreview, toolUseId };
+      }
+      if (subtype === "task_progress") {
+        const contentPreview =
+          typeof msg.description === "string"
+            ? msg.description.slice(0, 200)
+            : undefined;
+        const toolUseId =
+          typeof msg.tool_use_id === "string" ? msg.tool_use_id : undefined;
+        return { contentPreview, toolUseId };
+      }
+      if (subtype === "task_notification") {
+        const contentPreview =
+          typeof msg.summary === "string"
+            ? msg.summary.slice(0, 200)
+            : undefined;
+        const toolUseId =
+          typeof msg.tool_use_id === "string" ? msg.tool_use_id : undefined;
+        return { contentPreview, toolUseId };
+      }
       return {};
     }
 

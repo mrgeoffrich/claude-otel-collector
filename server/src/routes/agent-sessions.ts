@@ -108,6 +108,8 @@ router.get(
       resultText: m.resultText,
       toolSummary: m.toolSummary,
       parentToolUseId: m.parentToolUseId,
+      taskId: m.taskId,
+      taskStatus: m.taskStatus,
     }));
 
     const response: PaginatedResponse<ConversationMessageResponse> = {

@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@claude-otel/lib": "*",
-    "@mrgeoffrich/claude-agent-sdk-tap": "^0.1.4",
+    "@mrgeoffrich/claude-agent-sdk-tap": "^0.1.5",
     "@paralleldrive/cuid2": "^3.3.0",
     "@prisma/client": "^6.16.2",
     "better-sqlite3": "^12.8.0",

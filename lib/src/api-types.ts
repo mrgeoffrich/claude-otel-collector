@@ -76,6 +76,8 @@ export interface ConversationMessageResponse {
   resultText: string | null;
   toolSummary: string | null;
   parentToolUseId: string | null;
+  taskId: string | null;
+  taskStatus: string | null;
 }
 
 export interface PaginatedResponse<T> {

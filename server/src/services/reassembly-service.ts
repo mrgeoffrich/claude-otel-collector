@@ -1,7 +1,7 @@
 import { MessageEnvelope } from "@claude-otel/lib";
 import prisma from "../lib/prisma";
 
-const CONVERSATION_TYPES = new Set(["assistant", "user", "result", "tool_use_summary"]);
+const CONVERSATION_TYPES = new Set(["assistant", "user", "result", "tool_use_summary", "tap:query_params"]);
 
 /**
  * Reassemble a message envelope into a ConversationMessage if it's conversation-relevant.
@@ -13,7 +13,11 @@ export async function reassembleMessage(
   // Filter: only conversation-relevant types
   const isSystemInit =
     envelope.type === "system" && envelope.subtype === "init";
-  if (!CONVERSATION_TYPES.has(envelope.type) && !isSystemInit) {
+  const isTaskMessage =
+    envelope.type === "system" &&
+    (envelope.subtype === "task_started" ||
+      envelope.subtype === "task_notification");
+  if (!CONVERSATION_TYPES.has(envelope.type) && !isSystemInit && !isTaskMessage) {
     return;
   }
 
@@ -21,6 +25,11 @@ export async function reassembleMessage(
   const timestamp = new Date(envelope.timestamp);
 
   const fields = extractConversationFields(envelope.type, envelope.subtype, msg);
+
+  // Skip tap:query_params with no prompt text
+  if (envelope.type === "tap:query_params" && !fields.userContent) {
+    return;
+  }
 
   // Skip system/init if one already exists for this session (SDK can send duplicates)
   if (isSystemInit) {
@@ -68,6 +77,8 @@ interface ConversationFields {
   resultText?: string | null;
   toolSummary?: string | null;
   parentToolUseId?: string | null;
+  taskId?: string | null;
+  taskStatus?: string | null;
 }
 
 function extractConversationFields(
@@ -84,8 +95,12 @@ function extractConversationFields(
       return extractResultFields(msg);
     case "tool_use_summary":
       return extractToolSummaryFields(msg);
+    case "tap:query_params":
+      return extractQueryParamsFields(msg);
     case "system":
       if (subtype === "init") return extractSystemInitFields(msg);
+      if (subtype === "task_started") return extractTaskStartedFields(msg);
+      if (subtype === "task_notification") return extractTaskNotificationFields(msg);
       return { role: "system" };
     default:
       return { role: type };
@@ -197,10 +212,54 @@ function extractToolSummaryFields(msg: Record<string, unknown>): ConversationFie
   };
 }
 
+function extractQueryParamsFields(msg: Record<string, unknown>): ConversationFields {
+  const prompt = typeof msg.prompt === "string" ? msg.prompt : null;
+  return {
+    role: "user",
+    userContent: prompt,
+  };
+}
+
 function extractSystemInitFields(msg: Record<string, unknown>): ConversationFields {
   return {
     role: "system",
     textContent: "Session started",
     model: typeof msg.model === "string" ? msg.model : null,
+  };
+}
+
+function extractTaskStartedFields(msg: Record<string, unknown>): ConversationFields {
+  const taskId = typeof msg.task_id === "string" ? msg.task_id : null;
+  const description = typeof msg.description === "string" ? msg.description : null;
+  const parentToolUseId =
+    typeof msg.tool_use_id === "string" ? msg.tool_use_id : null;
+  return {
+    role: "task_started",
+    textContent: description,
+    taskId,
+    parentToolUseId,
+  };
+}
+
+function extractTaskNotificationFields(msg: Record<string, unknown>): ConversationFields {
+  const taskId = typeof msg.task_id === "string" ? msg.task_id : null;
+  const summary = typeof msg.summary === "string" ? msg.summary : null;
+  const status = typeof msg.status === "string" ? msg.status : null;
+  const parentToolUseId =
+    typeof msg.tool_use_id === "string" ? msg.tool_use_id : null;
+
+  const usage = msg.usage as Record<string, unknown> | undefined;
+  const durationMs =
+    typeof usage?.duration_ms === "number"
+      ? Math.floor(usage.duration_ms)
+      : null;
+
+  return {
+    role: "task_notification",
+    textContent: summary,
+    taskId,
+    taskStatus: status,
+    durationMs,
+    parentToolUseId,
   };
 }

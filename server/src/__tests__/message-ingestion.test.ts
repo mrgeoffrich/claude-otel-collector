@@ -579,6 +579,52 @@ describe("tap:query_params handling", () => {
     );
   });
 
+  it("should create a user conversation message from prompt", async () => {
+    const envelope = makeEnvelope({
+      sequence: 0,
+      uuid: "msg-qp-conv-001",
+      type: "tap:query_params",
+      subtype: null,
+      message: {
+        type: "tap:query_params",
+        prompt: "Fix the login bug",
+        model: "claude-sonnet-4-20250514",
+        cwd: "/Users/dev/my-project",
+        timestamp: "2026-03-25T10:00:00.000Z",
+      },
+    });
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    const convMsg = await prisma.conversationMessage.findUnique({
+      where: { uuid: "msg-qp-conv-001" },
+    });
+    expect(convMsg).not.toBeNull();
+    expect(convMsg!.role).toBe("user");
+    expect(convMsg!.userContent).toBe("Fix the login bug");
+  });
+
+  it("should not create a conversation message when prompt is missing", async () => {
+    const envelope = makeEnvelope({
+      sequence: 0,
+      uuid: "msg-qp-noprompt-001",
+      type: "tap:query_params",
+      subtype: null,
+      message: {
+        type: "tap:query_params",
+        cwd: "/Users/dev/my-project",
+        timestamp: "2026-03-25T10:00:00.000Z",
+      },
+    });
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    const convMsg = await prisma.conversationMessage.findUnique({
+      where: { uuid: "msg-qp-noprompt-001" },
+    });
+    expect(convMsg).toBeNull();
+  });
+
   it("should truncate long prompts in initialPrompt and contentPreview", async () => {
     const longPrompt = "x".repeat(1000);
     const envelope = makeEnvelope({
@@ -605,5 +651,166 @@ describe("tap:query_params handling", () => {
       where: { uuid: "msg-qp-003" },
     });
     expect(message!.contentPreview).toHaveLength(200);
+  });
+});
+
+describe("Sub-task message handling", () => {
+  it("should create a ConversationMessage for system:task_started", async () => {
+    const envelope = makeEnvelope({
+      type: "system",
+      subtype: "task_started",
+      uuid: "msg-task-start-1",
+      message: {
+        type: "system",
+        subtype: "task_started",
+        task_id: "task-abc-123",
+        tool_use_id: "tooluse-xyz",
+        description: "Investigating auth module",
+        task_type: "agent",
+        session_id: "test-session-1",
+      },
+    });
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    const conv = await prisma.conversationMessage.findUnique({
+      where: { uuid: "msg-task-start-1" },
+    });
+    expect(conv).not.toBeNull();
+    expect(conv!.role).toBe("task_started");
+    expect(conv!.textContent).toBe("Investigating auth module");
+    expect(conv!.taskId).toBe("task-abc-123");
+    expect(conv!.parentToolUseId).toBe("tooluse-xyz");
+    expect(conv!.taskStatus).toBeNull();
+  });
+
+  it("should create a ConversationMessage for system:task_notification", async () => {
+    const envelope = makeEnvelope({
+      type: "system",
+      subtype: "task_notification",
+      uuid: "msg-task-notif-1",
+      message: {
+        type: "system",
+        subtype: "task_notification",
+        task_id: "task-abc-123",
+        tool_use_id: "tooluse-xyz",
+        status: "completed",
+        output_file: "/tmp/output.txt",
+        summary: "Found and fixed the auth bug in login.ts",
+        usage: {
+          total_tokens: 5000,
+          tool_uses: 12,
+          duration_ms: 45000,
+        },
+        session_id: "test-session-1",
+      },
+    });
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    const conv = await prisma.conversationMessage.findUnique({
+      where: { uuid: "msg-task-notif-1" },
+    });
+    expect(conv).not.toBeNull();
+    expect(conv!.role).toBe("task_notification");
+    expect(conv!.textContent).toBe("Found and fixed the auth bug in login.ts");
+    expect(conv!.taskId).toBe("task-abc-123");
+    expect(conv!.taskStatus).toBe("completed");
+    expect(conv!.durationMs).toBe(45000);
+    expect(conv!.parentToolUseId).toBe("tooluse-xyz");
+  });
+
+  it("should extract metadata from task messages into AgentMessage", async () => {
+    const envelope = makeEnvelope({
+      type: "system",
+      subtype: "task_started",
+      uuid: "msg-task-meta-1",
+      message: {
+        type: "system",
+        subtype: "task_started",
+        task_id: "task-def-456",
+        tool_use_id: "tooluse-meta",
+        description: "Running tests for the payment module",
+        session_id: "test-session-1",
+      },
+    });
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    const message = await prisma.agentMessage.findUnique({
+      where: { uuid: "msg-task-meta-1" },
+    });
+    expect(message!.contentPreview).toBe("Running tests for the payment module");
+    expect(message!.toolUseId).toBe("tooluse-meta");
+  });
+
+  it("should NOT create a ConversationMessage for system:task_progress", async () => {
+    const envelope = makeEnvelope({
+      type: "system",
+      subtype: "task_progress",
+      uuid: "msg-task-prog-1",
+      message: {
+        type: "system",
+        subtype: "task_progress",
+        task_id: "task-abc-123",
+        description: "Still working on it",
+        usage: { total_tokens: 2000, tool_uses: 5, duration_ms: 20000 },
+        session_id: "test-session-1",
+      },
+    });
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    const conv = await prisma.conversationMessage.findUnique({
+      where: { uuid: "msg-task-prog-1" },
+    });
+    expect(conv).toBeNull();
+  });
+
+  it("should handle task_notification with failed status", async () => {
+    const envelope = makeEnvelope({
+      type: "system",
+      subtype: "task_notification",
+      uuid: "msg-task-fail-1",
+      message: {
+        type: "system",
+        subtype: "task_notification",
+        task_id: "task-fail-789",
+        status: "failed",
+        summary: "Could not resolve the dependency conflict",
+        usage: { total_tokens: 3000, tool_uses: 8, duration_ms: 30000 },
+        session_id: "test-session-1",
+      },
+    });
+
+    await request(app).post("/messages").send(envelope).expect(200);
+
+    const conv = await prisma.conversationMessage.findUnique({
+      where: { uuid: "msg-task-fail-1" },
+    });
+    expect(conv!.taskStatus).toBe("failed");
+    expect(conv!.textContent).toBe("Could not resolve the dependency conflict");
+    expect(conv!.durationMs).toBe(30000);
+  });
+
+  it("should show task messages in conversation endpoint", async () => {
+    const envelopes = [
+      makeEnvelope({ sequence: 1, uuid: "msg-u1", type: "user", message: { type: "user", message: { content: "Fix the bug" }, parent_tool_use_id: null, session_id: "test-session-1" } }),
+      makeEnvelope({ sequence: 2, uuid: "msg-a1" }),
+      makeEnvelope({ sequence: 3, uuid: "msg-ts1", type: "system", subtype: "task_started", message: { type: "system", subtype: "task_started", task_id: "t1", description: "Investigating", session_id: "test-session-1" } }),
+      makeEnvelope({ sequence: 4, uuid: "msg-tn1", type: "system", subtype: "task_notification", message: { type: "system", subtype: "task_notification", task_id: "t1", status: "completed", summary: "Done", usage: { total_tokens: 100, tool_uses: 2, duration_ms: 5000 }, session_id: "test-session-1" } }),
+    ];
+
+    await request(app).post("/messages").send(envelopes).expect(200);
+
+    const res = await request(app)
+      .get("/api/sessions/test-session-1/conversation")
+      .expect(200);
+
+    expect(res.body.data).toHaveLength(4);
+    expect(res.body.data[2].role).toBe("task_started");
+    expect(res.body.data[2].taskId).toBe("t1");
+    expect(res.body.data[3].role).toBe("task_notification");
+    expect(res.body.data[3].taskStatus).toBe("completed");
   });
 });

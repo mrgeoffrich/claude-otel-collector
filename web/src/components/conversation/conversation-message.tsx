@@ -4,6 +4,7 @@ import { AssistantMessage } from "./assistant-message";
 import { ResultMessage } from "./result-message";
 import { SystemMessage } from "./system-message";
 import { ToolSummaryMessage } from "./tool-summary-message";
+import { TaskMessage } from "./task-message";
 
 export function ConversationMessage({ message }: { message: ConversationMessageResponse }) {
   switch (message.role) {
@@ -19,6 +20,9 @@ export function ConversationMessage({ message }: { message: ConversationMessageR
       return <SystemMessage message={message} />;
     case "tool_summary":
       return <ToolSummaryMessage message={message} />;
+    case "task_started":
+    case "task_notification":
+      return <TaskMessage message={message} />;
     default:
       return null;
   }
