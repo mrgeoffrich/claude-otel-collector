@@ -1,6 +1,8 @@
 import { Router, Request, Response, RequestHandler } from "express";
 import prisma from "../lib/prisma";
-import { PaginatedResponse, AgentSessionResponse, AgentMessageResponse, ConversationMessageResponse } from "@claude-otel/lib";
+import { PaginatedResponse, AgentSessionResponse, AgentMessageResponse, ConversationMessageResponse, MessageEnvelope } from "@claude-otel/lib";
+import { reassembleMessage } from "../services/reassembly-service";
+import { appLogger } from "../lib/logger";
 
 const router = Router();
 
@@ -177,6 +179,67 @@ router.get(
     };
 
     res.json(response);
+  }) as RequestHandler,
+);
+
+// POST /api/sessions/:id/reprocess — re-derive conversation from raw messages
+router.post(
+  "/:id/reprocess",
+  (async (req: Request, res: Response) => {
+    const sessionId = String(req.params.id);
+
+    const session = await prisma.agentSession.findUnique({
+      where: { id: sessionId },
+      select: { id: true },
+    });
+
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+
+    // Fetch all raw messages for this session, ordered by sequence
+    const rawMessages = await prisma.agentMessage.findMany({
+      where: { sessionId },
+      orderBy: { sequence: "asc" },
+    });
+
+    // Delete existing conversation messages
+    const deleted = await prisma.conversationMessage.deleteMany({
+      where: { sessionId },
+    });
+
+    // Re-run reassembly on each raw message
+    let processed = 0;
+    let errors = 0;
+    for (const msg of rawMessages) {
+      try {
+        const envelope: MessageEnvelope = {
+          session_id: msg.sessionId,
+          sequence: msg.sequence,
+          timestamp: msg.timestamp.toISOString(),
+          uuid: msg.uuid,
+          type: msg.type,
+          subtype: msg.subtype ?? null,
+          message: JSON.parse(msg.rawMessage),
+        };
+        await reassembleMessage(envelope);
+        processed++;
+      } catch (err) {
+        errors++;
+        appLogger.error(
+          { err, uuid: msg.uuid, type: msg.type },
+          "Failed to reprocess message",
+        );
+      }
+    }
+
+    res.json({
+      sessionId,
+      deletedConversationMessages: deleted.count,
+      rawMessagesProcessed: processed,
+      errors,
+    });
   }) as RequestHandler,
 );
 
