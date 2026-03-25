@@ -1,27 +1,17 @@
 import type { ConversationMessageResponse } from "@claude-otel/lib";
-import { formatCost, formatDuration } from "@/lib/format";
 
 export function ResultMessage({ message }: { message: ConversationMessageResponse }) {
-  const isError = message.isError === true;
+  // Result messages with errors still render as a visible card
+  if (!message.isError) {
+    // Non-error results are rendered by SessionEndMarker in the turn layout
+    return null;
+  }
 
   return (
-    <div className={`rounded-lg px-4 py-3 ${isError ? "bg-destructive/10" : "bg-muted/30"}`}>
-      <p className={`text-xs font-medium mb-1 ${isError ? "text-destructive" : "text-muted-foreground"}`}>
-        {isError ? "Session Error" : "Session Complete"}
-      </p>
-      <div className="flex items-center gap-4 text-sm">
-        {message.costUsd != null && (
-          <span className="text-muted-foreground">Cost: <span className="text-foreground font-medium">{formatCost(message.costUsd)}</span></span>
-        )}
-        {message.durationMs != null && (
-          <span className="text-muted-foreground">Duration: <span className="text-foreground font-medium">{formatDuration(message.durationMs)}</span></span>
-        )}
-        {message.numTurns != null && (
-          <span className="text-muted-foreground">Turns: <span className="text-foreground font-medium">{message.numTurns}</span></span>
-        )}
-      </div>
+    <div className="rounded-lg bg-destructive/10 px-4 py-3">
+      <p className="text-xs font-medium text-destructive mb-1">Session Error</p>
       {message.resultText && (
-        <p className="mt-2 text-xs text-muted-foreground">{message.resultText}</p>
+        <p className="text-xs text-destructive/80">{message.resultText}</p>
       )}
     </div>
   );

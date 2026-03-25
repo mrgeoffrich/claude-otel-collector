@@ -1,13 +1,15 @@
 import type { ConversationMessageResponse } from "@claude-otel/lib";
-import { Badge } from "@/components/ui/badge";
 
 export function SystemMessage({ message }: { message: ConversationMessageResponse }) {
   return (
-    <div className="rounded-lg bg-muted/20 px-4 py-2 border border-border/50">
-      <div className="flex items-center gap-2">
-        <p className="text-xs text-muted-foreground">{message.textContent || "System"}</p>
-        {message.model && <Badge variant="secondary">{message.model.replace("claude-", "").split("-202")[0]}</Badge>}
-      </div>
+    <div className="inline-flex items-center gap-1.5 rounded-md bg-muted/30 px-2.5 py-1 text-[11px] text-muted-foreground">
+      <span>{message.textContent || "System"}</span>
+      {message.model && (
+        <>
+          <span className="text-muted-foreground/40">·</span>
+          <span>{message.model.replace("claude-", "").split("-202")[0]}</span>
+        </>
+      )}
     </div>
   );
 }

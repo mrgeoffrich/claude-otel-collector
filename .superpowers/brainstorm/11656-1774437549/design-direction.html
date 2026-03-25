@@ -1,0 +1,92 @@
+<h2>Session Detail — Design Direction</h2>
+<p class="subtitle">Which of these feels closest to what you want?</p>
+
+<div class="cards">
+  <div class="card" data-choice="chat" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="padding: 16px; font-size: 13px; line-height: 1.6;">
+        <div style="background: #f0fdf4; border-radius: 12px 12px 12px 2px; padding: 12px 16px; margin-bottom: 8px; max-width: 80%;">
+          <div style="font-size: 11px; color: #666; margin-bottom: 4px;">Assistant · sonnet-4-6</div>
+          Hello! I'm your Mini Infra AI assistant...
+        </div>
+        <div style="background: #eff6ff; border-radius: 12px 12px 2px 12px; padding: 12px 16px; margin-bottom: 8px; max-width: 70%; margin-left: auto; text-align: right;">
+          <div style="font-size: 11px; color: #666; margin-bottom: 4px;">User</div>
+          Show me my containers
+        </div>
+        <div style="background: #f8f8f8; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; font-size: 11px; color: #888; max-width: 80%;">
+          <span style="color: #f59e0b;">&#9654;</span> api_request <span style="color: #aaa;">— GET /api/containers</span>
+        </div>
+        <div style="background: #f0fdf4; border-radius: 12px 12px 12px 2px; padding: 12px 16px; max-width: 80%;">
+          <div style="font-size: 11px; color: #666; margin-bottom: 4px;">Assistant · sonnet-4-6</div>
+          Here's a summary of your <b>15 containers</b>...
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Chat Bubbles</h3>
+      <p>Familiar messaging UI. User messages on the right, assistant on the left. Tool calls are compact inline rows. Clean and scannable.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="timeline" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="padding: 16px; font-size: 13px; line-height: 1.6;">
+        <!-- Turn 1 -->
+        <div style="border-left: 2px solid #22c55e; padding-left: 16px; margin-bottom: 16px;">
+          <div style="font-size: 11px; color: #888; margin-bottom: 6px;">Turn 1 · $0.04 · 3.9s</div>
+          <div style="background: #fafafa; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+            <div style="font-size: 11px; font-weight: 600; color: #666; margin-bottom: 4px;">ASSISTANT</div>
+            Hello! I'm your Mini Infra AI assistant...
+          </div>
+          <div style="font-size: 11px; color: #888; padding: 4px 0;">
+            <span style="display: inline-block; background: #fef3c7; border-radius: 4px; padding: 2px 8px; font-size: 10px;">api_request</span>
+          </div>
+        </div>
+        <!-- Turn 2 -->
+        <div style="border-left: 2px solid #22c55e; padding-left: 16px;">
+          <div style="font-size: 11px; color: #888; margin-bottom: 6px;">Turn 2 · $0.05 · 9.9s</div>
+          <div style="background: #fafafa; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+            <div style="font-size: 11px; font-weight: 600; color: #666; margin-bottom: 4px;">ASSISTANT</div>
+            Here's a summary of your <b>15 containers</b>...
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Turn Timeline</h3>
+      <p>Grouped by turn with cost/duration per turn. Vertical timeline with clear boundaries. Tool calls inline but compact. Good for debugging.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="clean-list" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="padding: 16px; font-size: 13px; line-height: 1.6;">
+        <div style="padding: 12px 16px; border-bottom: 1px solid #eee;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <div style="width: 24px; height: 24px; border-radius: 50%; background: #22c55e; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 600;">A</div>
+            <span style="font-size: 11px; color: #888;">sonnet-4-6 · 3.9s</span>
+          </div>
+          <div>Hello! I'm your Mini Infra AI assistant...</div>
+        </div>
+        <div style="padding: 8px 16px; border-bottom: 1px solid #eee; background: #fafafa;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 24px; height: 24px; border-radius: 50%; background: #f59e0b; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px;">&#8594;</div>
+            <span style="font-size: 12px; font-family: monospace;">api_request</span>
+            <span style="font-size: 11px; color: #aaa;">GET /api/containers</span>
+          </div>
+        </div>
+        <div style="padding: 12px 16px; border-bottom: 1px solid #eee;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <div style="width: 24px; height: 24px; border-radius: 50%; background: #22c55e; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 600;">A</div>
+            <span style="font-size: 11px; color: #888;">sonnet-4-6 · 9.9s</span>
+          </div>
+          <div>Here's a summary of your <b>15 containers</b>...</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Clean List</h3>
+      <p>Refined version of current layout. Avatars instead of borders, better spacing, tool calls as compact rows. Less visual noise, same structure.</p>
+    </div>
+  </div>
+</div>

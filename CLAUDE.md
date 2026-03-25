@@ -50,6 +50,8 @@ Monorepo with three npm workspaces (`lib`, `server`, `web`):
 
 ## Prisma
 
+The dev database is at `server/prisma/prisma/dev.db` (note the double `prisma` — Prisma resolves `file:./prisma/dev.db` relative to the schema file location in `server/prisma/`).
+
 Never use `prisma db push`. Always create migrations with `prisma migrate dev --name <description>` when changing the schema. This ensures schema changes are tracked, reviewable, and reproducible.
 
 ## Configuring Claude Code

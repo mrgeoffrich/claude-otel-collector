@@ -22,6 +22,22 @@ export async function reassembleMessage(
 
   const fields = extractConversationFields(envelope.type, envelope.subtype, msg);
 
+  // Skip system/init if one already exists for this session (SDK can send duplicates)
+  if (isSystemInit) {
+    const existing = await prisma.conversationMessage.findFirst({
+      where: { sessionId: envelope.session_id, role: "system" },
+    });
+    if (existing) return;
+  }
+
+  // For result messages, replace any existing result for this session
+  // (each turn emits a result; the latest has cumulative cost/duration/turns)
+  if (envelope.type === "result") {
+    await prisma.conversationMessage.deleteMany({
+      where: { sessionId: envelope.session_id, role: "result" },
+    });
+  }
+
   await prisma.conversationMessage.upsert({
     where: { uuid: envelope.uuid },
     create: {

@@ -8,6 +8,8 @@ import { ToolSummaryMessage } from "./tool-summary-message";
 export function ConversationMessage({ message }: { message: ConversationMessageResponse }) {
   switch (message.role) {
     case "user":
+      // Skip user messages with no text (e.g. tool_result-only messages)
+      if (!message.userContent) return null;
       return <UserMessage message={message} />;
     case "assistant":
       return <AssistantMessage message={message} />;
